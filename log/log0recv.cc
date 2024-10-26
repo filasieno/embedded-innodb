@@ -37,6 +37,7 @@ Created 9/20/1997 Heikki Tuuri
 #include "mtr0mtr.h"
 #include "page0cur.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "sync0sync.h"
 #include "trx0rec.h"
 #include "trx0roll.h"
@@ -265,7 +266,7 @@ void Recv_sys::close() noexcept {
  * @param checkpoint_lsn The LSN of the checkpoint from which recovery was started.
  */
 static void recv_truncate_group(log_group_t *group, lsn_t recovered_lsn, lsn_t limit_lsn, lsn_t checkpoint_lsn) noexcept {
-  auto finish_lsn1 = ut_uint64_align_down(checkpoint_lsn, IB_FILE_BLOCK_SIZE) + log_sys->group_get_capacity(group);
+  auto finish_lsn1 = ut_uint64_align_down(checkpoint_lsn, IB_FILE_BLOCK_SIZE) + state.log_sys->group_get_capacity(group);
   auto finish_lsn2 = ut_uint64_align_up(recovered_lsn, IB_FILE_BLOCK_SIZE) + recv_sys->m_last_log_buf_size;
 
   lsn_t finish_lsn;
@@ -281,9 +282,9 @@ static void recv_truncate_group(log_group_t *group, lsn_t recovered_lsn, lsn_t l
     finish_lsn = finish_lsn1 < finish_lsn2 ? finish_lsn1 : finish_lsn2;
   }
 
-  ut_a(RECV_SCAN_SIZE <= log_sys->m_buf_size);
+  ut_a(RECV_SCAN_SIZE <= state.log_sys->m_buf_size);
 
-  memset(log_sys->m_buf, '\0', RECV_SCAN_SIZE);
+  memset(state.log_sys->m_buf, '\0', RECV_SCAN_SIZE);
 
   auto start_lsn = ut_uint64_align_down(recovered_lsn, IB_FILE_BLOCK_SIZE);
 
@@ -291,9 +292,9 @@ static void recv_truncate_group(log_group_t *group, lsn_t recovered_lsn, lsn_t l
     /* Copy the last incomplete log block to the log buffer and
     edit its data length: */
 
-    memcpy(log_sys->m_buf, recv_sys->m_last_block, IB_FILE_BLOCK_SIZE);
+    memcpy(state.log_sys->m_buf, recv_sys->m_last_block, IB_FILE_BLOCK_SIZE);
 
-    log_sys->block_set_data_len(log_sys->m_buf, ulint(recovered_lsn - start_lsn));
+    state.log_sys->block_set_data_len(state.log_sys->m_buf, ulint(recovered_lsn - start_lsn));
   }
 
   if (start_lsn < finish_lsn) {
@@ -307,14 +308,14 @@ static void recv_truncate_group(log_group_t *group, lsn_t recovered_lsn, lsn_t l
 
       auto len = ulint(end_lsn - start_lsn);
 
-      log_sys->group_write_buf(group, log_sys->m_buf, len, start_lsn, 0);
+      state.log_sys->group_write_buf(group, state.log_sys->m_buf, len, start_lsn, 0);
 
       if (end_lsn >= finish_lsn) {
 
         return;
       }
 
-      memset(log_sys->m_buf, '\0', RECV_SCAN_SIZE);
+      memset(state.log_sys->m_buf, '\0', RECV_SCAN_SIZE);
 
       start_lsn = end_lsn;
     }
@@ -335,7 +336,7 @@ static void recv_copy_group(log_group_t *up_to_date_group, log_group_t *group, l
     return;
   }
 
-  ut_a(RECV_SCAN_SIZE <= log_sys->m_buf_size);
+  ut_a(RECV_SCAN_SIZE <= state.log_sys->m_buf_size);
 
   auto start_lsn = ut_uint64_align_down(group->scanned_lsn, IB_FILE_BLOCK_SIZE);
 
@@ -346,11 +347,11 @@ static void recv_copy_group(log_group_t *up_to_date_group, log_group_t *group, l
       end_lsn = ut_uint64_align_up(recovered_lsn, IB_FILE_BLOCK_SIZE);
     }
 
-    log_sys->group_read_log_seg(LOG_RECOVER, log_sys->m_buf, up_to_date_group, start_lsn, end_lsn);
+    state.log_sys->group_read_log_seg(LOG_RECOVER, state.log_sys->m_buf, up_to_date_group, start_lsn, end_lsn);
 
     auto len = (ulint)(end_lsn - start_lsn);
 
-    log_sys->group_write_buf(group, log_sys->m_buf, len, start_lsn, 0);
+    state.log_sys->group_write_buf(group, state.log_sys->m_buf, len, start_lsn, 0);
 
     if (end_lsn >= recovered_lsn) {
 
@@ -380,9 +381,9 @@ static void recv_synchronize_groups(log_group_t *up_to_date_group) noexcept {
 
   ut_a(start_lsn != end_lsn);
 
-  log_sys->group_read_log_seg(LOG_RECOVER, recv_sys->m_last_block, up_to_date_group, start_lsn, end_lsn);
+  state.log_sys->group_read_log_seg(LOG_RECOVER, recv_sys->m_last_block, up_to_date_group, start_lsn, end_lsn);
 
-  for (auto group : log_sys->m_log_groups) {
+  for (auto group : state.log_sys->m_log_groups) {
     if (group != up_to_date_group) {
 
       /* Copy log data if needed */
@@ -393,7 +394,7 @@ static void recv_synchronize_groups(log_group_t *up_to_date_group) noexcept {
     /* Update the fields in the group struct to correspond to
     recovered_lsn */
 
-    log_sys->group_set_fields(group, recovered_lsn);
+    state.log_sys->group_set_fields(group, recovered_lsn);
   }
 
   /* Copy the checkpoint info to the groups; remember that we have
@@ -401,15 +402,15 @@ static void recv_synchronize_groups(log_group_t *up_to_date_group) noexcept {
   over the max checkpoint info, thus making the preservation of max
   checkpoint info on disk certain */
 
-  log_sys->groups_write_checkpoint_info();
+  state.log_sys->groups_write_checkpoint_info();
 
-  log_sys->release();
+  state.log_sys->release();
 
   /* Wait for the checkpoint write to complete */
-  rw_lock_s_lock(&log_sys->m_checkpoint_lock);
-  rw_lock_s_unlock(&log_sys->m_checkpoint_lock);
+  rw_lock_s_lock(&state.log_sys->m_checkpoint_lock);
+  rw_lock_s_unlock(&state.log_sys->m_checkpoint_lock);
 
-  log_sys->acquire();
+  state.log_sys->acquire();
 }
 
 /**
@@ -448,14 +449,14 @@ static db_err recv_find_max_checkpoint(log_group_t **max_group, ulint *max_field
   *max_group = nullptr;
 
   uint64_t max_no{};
-  auto buf = log_sys->m_checkpoint_buf;
+  auto buf = state.log_sys->m_checkpoint_buf;
 
-  for (auto group : log_sys->m_log_groups) {
+  for (auto group : state.log_sys->m_log_groups) {
     group->state = LOG_GROUP_CORRUPTED;
 
     for (auto field = LOG_CHECKPOINT_1; field <= LOG_CHECKPOINT_2; field += LOG_CHECKPOINT_2 - LOG_CHECKPOINT_1) {
 
-      log_sys->group_read_checkpoint_info(group, field);
+      state.log_sys->group_read_checkpoint_info(group, field);
 
       if (recv_check_cp_is_consistent(buf)) {
         group->state = LOG_GROUP_OK;
@@ -1082,7 +1083,7 @@ void recv_apply_log_recs(DBLWR *dblwr, bool flush_and_free_pages) noexcept {
   if (flush_and_free_pages) {
     /* Flush all the file pages to disk and invalidate them in the buffer pool */
     mutex_exit(&recv_sys->m_mutex);
-    log_sys->release();
+    state.log_sys->release();
 
     auto n_pages = srv_buf_pool->m_flusher->batch(dblwr, BUF_FLUSH_LIST, ULINT_MAX, IB_UINT64_T_MAX);
     ut_a(n_pages != ULINT_UNDEFINED);
@@ -1091,7 +1092,7 @@ void recv_apply_log_recs(DBLWR *dblwr, bool flush_and_free_pages) noexcept {
 
     srv_buf_pool->invalidate();
 
-    log_sys->acquire();
+    state.log_sys->acquire();
     mutex_enter(&recv_sys->m_mutex);
   }
 
@@ -1255,7 +1256,7 @@ static bool recv_parse_log_recs(bool store_to_hash) noexcept {
   page_no_t page_no;
   lsn_t new_recovered_lsn;
 
-  ut_ad(mutex_own(&log_sys->m_mutex));
+  ut_ad(mutex_own(&state.log_sys->m_mutex));
   ut_ad(recv_sys->m_parse_start_lsn != 0);
 
   for (;;) {
@@ -1683,14 +1684,14 @@ static void recv_group_scan_log_recs(
   while (!finished) {
     auto end_lsn = start_lsn + RECV_SCAN_SIZE;
 
-    log_sys->group_read_log_seg(LOG_RECOVER, log_sys->m_buf, group, start_lsn, end_lsn);
+    state.log_sys->group_read_log_seg(LOG_RECOVER, state.log_sys->m_buf, group, start_lsn, end_lsn);
 
     finished = recv_scan_log_recs(
       dblwr,
       recovery,
       (srv_buf_pool->m_curr_size - recv_n_pool_free_frames) * UNIV_PAGE_SIZE,
       true,
-      log_sys->m_buf,
+      state.log_sys->m_buf,
       RECV_SCAN_SIZE,
       start_lsn,
       contiguous_lsn,
@@ -1768,7 +1769,7 @@ db_err recv_recovery_from_checkpoint_start(DBLWR *dblwr, ib_recovery_t recovery,
 
   recv_sys->m_limit_lsn = IB_UINT64_T_MAX;
 
-  log_sys->acquire();
+  state.log_sys->acquire();
 
   /* Look for the latest checkpoint from any of the log groups */
 
@@ -1779,14 +1780,14 @@ db_err recv_recovery_from_checkpoint_start(DBLWR *dblwr, ib_recovery_t recovery,
 
   if (err != DB_SUCCESS) {
 
-    log_sys->release();
+    state.log_sys->release();
 
     return err;
   }
 
-  log_sys->group_read_checkpoint_info(max_cp_group, max_cp_field);
+  state.log_sys->group_read_checkpoint_info(max_cp_group, max_cp_field);
 
-  auto buf = log_sys->m_checkpoint_buf;
+  auto buf = state.log_sys->m_checkpoint_buf;
 
   lsn_t checkpoint_lsn = mach_read_from_8(buf + LOG_CHECKPOINT_LSN);
   auto checkpoint_no = mach_read_from_8(buf + LOG_CHECKPOINT_NO);
@@ -1807,11 +1808,11 @@ db_err recv_recovery_from_checkpoint_start(DBLWR *dblwr, ib_recovery_t recovery,
   auto up_to_date_group = max_cp_group;
   auto contiguous_lsn = ut_uint64_align_down(recv_sys->m_scanned_lsn, IB_FILE_BLOCK_SIZE);
 
-  ut_ad(RECV_SCAN_SIZE <= log_sys->m_buf_size);
+  ut_ad(RECV_SCAN_SIZE <= state.log_sys->m_buf_size);
 
   lsn_t group_scanned_lsn{};
 
-  for (auto group : log_sys->m_log_groups) {
+  for (auto group : state.log_sys->m_log_groups) {
     auto old_scanned_lsn = recv_sys->m_scanned_lsn;
 
     recv_group_scan_log_recs(dblwr, recovery, group, &contiguous_lsn, &group_scanned_lsn);
@@ -1849,7 +1850,7 @@ db_err recv_recovery_from_checkpoint_start(DBLWR *dblwr, ib_recovery_t recovery,
 
   if (recv_sys->m_recovered_lsn < checkpoint_lsn) {
 
-    log_sys->release();
+    state.log_sys->release();
 
     ut_a(recv_sys->m_recovered_lsn >= LSN_MAX);
 
@@ -1859,8 +1860,8 @@ db_err recv_recovery_from_checkpoint_start(DBLWR *dblwr, ib_recovery_t recovery,
   /* Synchronize the uncorrupted log groups to the most up-to-date log
   group; we also copy checkpoint info to groups */
 
-  log_sys->m_next_checkpoint_lsn = checkpoint_lsn;
-  log_sys->m_next_checkpoint_no = checkpoint_no + 1;
+  state.log_sys->m_next_checkpoint_lsn = checkpoint_lsn;
+  state.log_sys->m_next_checkpoint_no = checkpoint_no + 1;
 
   recv_synchronize_groups(up_to_date_group);
 
@@ -1870,18 +1871,18 @@ db_err recv_recovery_from_checkpoint_start(DBLWR *dblwr, ib_recovery_t recovery,
     srv_start_lsn = recv_sys->m_recovered_lsn;
   }
 
-  log_sys->m_lsn = recv_sys->m_recovered_lsn;
+  state.log_sys->m_lsn = recv_sys->m_recovered_lsn;
 
-  memcpy(log_sys->m_buf, recv_sys->m_last_block, IB_FILE_BLOCK_SIZE);
+  memcpy(state.log_sys->m_buf, recv_sys->m_last_block, IB_FILE_BLOCK_SIZE);
 
-  log_sys->m_buf_free = ulint(log_sys->m_lsn % IB_FILE_BLOCK_SIZE);
-  log_sys->m_buf_next_to_write = log_sys->m_buf_free;
-  log_sys->m_written_to_some_lsn = log_sys->m_lsn;
-  log_sys->m_written_to_all_lsn = log_sys->m_lsn;
+  state.log_sys->m_buf_free = state.log_sys->m_lsn % IB_FILE_BLOCK_SIZE;
+  state.log_sys->m_buf_next_to_write = state.log_sys->m_buf_free;
+  state.log_sys->m_written_to_some_lsn = state.log_sys->m_lsn;
+  state.log_sys->m_written_to_all_lsn = state.log_sys->m_lsn;
 
-  log_sys->m_last_checkpoint_lsn = checkpoint_lsn;
+  state.log_sys->m_last_checkpoint_lsn = checkpoint_lsn;
 
-  log_sys->m_next_checkpoint_no = checkpoint_no + 1;
+  state.log_sys->m_next_checkpoint_no = checkpoint_no + 1;
 
   mutex_enter(&recv_sys->m_mutex);
 
@@ -1889,7 +1890,7 @@ db_err recv_recovery_from_checkpoint_start(DBLWR *dblwr, ib_recovery_t recovery,
 
   mutex_exit(&recv_sys->m_mutex);
 
-  log_sys->release();
+  state.log_sys->release();
 
   recv_lsn_checks_on = true;
 
@@ -1973,12 +1974,12 @@ void recv_recovery_rollback_active() noexcept {
 }
 
 void recv_reset_logs(lsn_t lsn, bool new_logs_created) noexcept {
-  ut_ad(mutex_own(&log_sys->m_mutex));
+  ut_ad(mutex_own(&state.log_sys->m_mutex));
 
-  log_sys->m_lsn = ut_uint64_align_up(lsn, IB_FILE_BLOCK_SIZE);
+  state.log_sys->m_lsn = ut_uint64_align_up(lsn, IB_FILE_BLOCK_SIZE);
 
-  for (auto group : log_sys->m_log_groups) {
-    group->lsn = log_sys->m_lsn;
+  for (auto group : state.log_sys->m_log_groups) {
+    group->lsn = state.log_sys->m_lsn;
     group->lsn_offset = LOG_FILE_HDR_SIZE;
 
     if (!new_logs_created) {
@@ -1986,27 +1987,27 @@ void recv_reset_logs(lsn_t lsn, bool new_logs_created) noexcept {
     }
   }
 
-  log_sys->m_buf_next_to_write = 0;
-  log_sys->m_written_to_some_lsn = log_sys->m_lsn;
-  log_sys->m_written_to_all_lsn = log_sys->m_lsn;
+  state.log_sys->m_buf_next_to_write = 0;
+  state.log_sys->m_written_to_some_lsn = state.log_sys->m_lsn;
+  state.log_sys->m_written_to_all_lsn = state.log_sys->m_lsn;
 
-  log_sys->m_next_checkpoint_no = 0;
-  log_sys->m_last_checkpoint_lsn = 0;
+  state.log_sys->m_next_checkpoint_no = 0;
+  state.log_sys->m_last_checkpoint_lsn = 0;
 
-  log_sys->block_init(log_sys->m_buf, log_sys->m_lsn);
-  log_sys->block_set_first_rec_group(log_sys->m_buf, LOG_BLOCK_HDR_SIZE);
+  state.log_sys->block_init(state.log_sys->m_buf, state.log_sys->m_lsn);
+  state.log_sys->block_set_first_rec_group(state.log_sys->m_buf, LOG_BLOCK_HDR_SIZE); //NOTE: Static method; FIXME
 
-  log_sys->m_buf_free = LOG_BLOCK_HDR_SIZE;
-  log_sys->m_lsn += LOG_BLOCK_HDR_SIZE;
+  state.log_sys->m_buf_free = LOG_BLOCK_HDR_SIZE;
+  state.log_sys->m_lsn += LOG_BLOCK_HDR_SIZE;
 
-  log_sys->release();
+  state.log_sys->release();
 
   /* Reset the checkpoint fields in logs */
 
-  log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
-  log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
+  state.log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
+  state.log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
 
-  log_sys->acquire();
+  state.log_sys->acquire();
 }
 
 std::string to_string(Recv_addr_state s) noexcept {

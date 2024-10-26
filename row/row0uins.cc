@@ -22,17 +22,17 @@ Fresh insert undo
 Created 2/25/1997 Heikki Tuuri
 *******************************************************/
 
+#include "row0uins.h"
 #include "btr0btr.h"
-#include "dict0dict.h"
 #include "dict0dict.h"
 #include "log0log.h"
 #include "mach0data.h"
 #include "que0que.h"
 #include "row0row.h"
 #include "row0undo.h"
-#include "row0uins.h"
 #include "row0upd.h"
 #include "row0vers.h"
+#include "srv0state.h"
 #include "trx0rec.h"
 #include "trx0roll.h"
 #include "trx0trx.h"
@@ -126,7 +126,7 @@ static db_err row_undo_ins_remove_sec_low(ulint mode, Index *index, DTuple *entr
   db_err err;
   Btree_pcursor pcur(srv_fsp, srv_btree_sys);
 
-  log_sys->free_check();
+  state.log_sys->free_check();
 
   mtr_t mtr;
 

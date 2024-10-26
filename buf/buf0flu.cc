@@ -22,9 +22,9 @@ The database buffer buf pool flush algorithm
 Created 11/11/1995 Heikki Tuuri
 *******************************************************/
 
-#include "buf0dblwr.h"
 #include "buf0flu.h"
 #include "buf0buf.h"
+#include "buf0dblwr.h"
 #include "buf0lru.h"
 #include "buf0rea.h"
 #include "fil0fil.h"
@@ -33,6 +33,7 @@ Created 11/11/1995 Heikki Tuuri
 #include "os0file.h"
 #include "page0page.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "trx0sys.h"
 #include "ut0lst.h"
 
@@ -557,7 +558,7 @@ void Buf_flush::write_block_low(DBLWR *dblwr, Buf_page *bpage) {
   ut_ad(bpage->m_newest_modification != 0);
 
   /* Force the log to the disk before writing the modified block */
-  log_sys->write_up_to(bpage->m_newest_modification, LOG_WAIT_ALL_GROUPS, true);
+  state.log_sys->write_up_to(bpage->m_newest_modification, LOG_WAIT_ALL_GROUPS, true);
 
   switch (bpage->get_state()) {
     case BUF_BLOCK_NOT_USED:
@@ -954,7 +955,7 @@ void Buf_flush::free_margin(DBLWR *dblwr) {
 }
 
 void Buf_flush::stat_update() {
-  auto lsn = log_sys->get_lsn();
+  auto lsn = state.log_sys->get_lsn();
 
   if (m_stat_cur.m_redo == 0) {
     /* First time around. Just update the current LSN and return. */
@@ -986,8 +987,8 @@ void Buf_flush::stat_update() {
 }
 
 ulint Buf_flush::get_desired_flush_rate() {
-  auto lsn = log_sys->get_lsn();
-  auto log_capacity = log_sys->get_capacity();
+  auto lsn = state.log_sys->get_lsn();
+  auto log_capacity = state.log_sys->get_capacity();
 
   /* log_capacity should never be zero after the initialization of log subsystem. */
   ut_ad(log_capacity != 0);

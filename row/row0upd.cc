@@ -22,6 +22,7 @@ Update of a row
 Created 12/27/1996 Heikki Tuuri
 *******************************************************/
 
+#include "row0upd.h"
 #include "btr0blob.h"
 #include "btr0btr.h"
 #include "btr0cur.h"
@@ -39,7 +40,8 @@ Created 12/27/1996 Heikki Tuuri
 #include "row0ins.h"
 #include "row0row.h"
 #include "row0sel.h"
-#include "row0upd.h"
+
+#include "srv0state.h"
 #include "trx0undo.h"
 
 /* What kind of latch and lock can we assume when the control comes to an update node?
@@ -846,7 +848,7 @@ db_err Row_update::sec_index_entry(upd_node_t *node, que_thr_t *thr) noexcept {
   auto entry = row_build_index_entry(node->m_row, node->m_ext, index, heap);
   ut_a(entry != nullptr);
 
-  log_sys->free_check();
+  state.log_sys->free_check();
 
   mtr_t mtr;
 

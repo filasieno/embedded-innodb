@@ -30,9 +30,14 @@ Created 4/20/1996 Heikki Tuuri
 #include "row0types.h"
 #include "trx0types.h"
 
-const ulint INS_NODE_MAGIC_N = 15849075;
-
+struct Buf_block;
+struct Btree_pcursor;
+struct mtr_t;
+struct Btree_cursor;
 struct Row_update;
+struct Lock_sys;
+
+constexpr ulint INS_NODE_MAGIC_N = 15849075;
 
 struct Row_insert {
 

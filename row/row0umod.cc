@@ -25,8 +25,8 @@ Created 2/27/1997 Heikki Tuuri
 #include "row0umod.h"
 
 #include "btr0btr.h"
-#include "dict0store.h"
 #include "dict0dict.h"
+#include "dict0store.h"
 #include "log0log.h"
 #include "mach0data.h"
 #include "que0que.h"
@@ -34,6 +34,7 @@ Created 2/27/1997 Heikki Tuuri
 #include "row0undo.h"
 #include "row0upd.h"
 #include "row0vers.h"
+#include "srv0state.h"
 #include "trx0rec.h"
 #include "trx0roll.h"
 #include "trx0trx.h"
@@ -274,7 +275,7 @@ static db_err row_undo_mod_del_mark_or_remove_sec_low(
   mtr_t mtr_vers;
   Btree_pcursor pcur(srv_fsp, srv_btree_sys);
 
-  log_sys->free_check();
+  state.log_sys->free_check();
   mtr.start();
 
   auto found = row_search_index_entry(index, entry, mode, &pcur, &mtr);
@@ -398,7 +399,7 @@ static db_err row_undo_mod_del_unmark_sec_and_undo_update(ulint mode, que_thr_t 
     return DB_SUCCESS;
   }
 
-  log_sys->free_check();
+  state.log_sys->free_check();
   mtr.start();
 
   if (unlikely(!row_search_index_entry(index, entry, mode, &pcur, &mtr))) {

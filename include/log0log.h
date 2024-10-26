@@ -44,8 +44,6 @@ Created 12/9/1995 Heikki Tuuri
 struct Log;
 struct log_group_t;
 
-extern Log *log_sys;
-
 struct Log {
 
   /**

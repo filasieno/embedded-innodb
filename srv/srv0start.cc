@@ -85,6 +85,8 @@ Created 2/16/1996 Heikki Tuuri
 
 #include <filesystem>
 
+#include "srv0state.h"
+
 /** System tablespace initial size.  */
 constexpr ulint SYSTEM_IBD_FILE_INITIAL_SIZE = 32 * 1024 * 1024;
 
@@ -358,7 +360,7 @@ static void srv_startup_abort(db_err err) noexcept {
   if (err != DB_FATAL) {
 
     /* Only if the redo log systemhas been initialized. */
-    if (log_sys != nullptr && UT_LIST_GET_LEN(log_sys->m_log_groups) > 0) {
+    if (state.log_sys != nullptr && UT_LIST_GET_LEN(state.log_sys->m_log_groups) > 0) {
       srv_prepare_for_shutdown(srv_config.m_force_recovery, srv_config.m_fast_shutdown);
     }
 
@@ -367,7 +369,7 @@ static void srv_startup_abort(db_err err) noexcept {
 
   srv_threads_shutdown();
 
-  log_sys->shutdown();
+  state.log_sys->shutdown();
 
   srv_buf_pool->close();
 
@@ -378,7 +380,7 @@ static void srv_startup_abort(db_err err) noexcept {
 
   os_file_free();
 
-  Log::destroy(log_sys);
+  Log::destroy(state.log_sys);
 
   AIO::destroy(srv_aio);
 
@@ -506,11 +508,11 @@ ib_err_t InnoDB::start() noexcept {
     return DB_OUT_OF_MEMORY;
   }
 
-  ut_a(log_sys == nullptr);
-  log_sys = Log::create();
+  ut_a(state.log_sys == nullptr);
+  state.log_sys = Log::create();
 
   ut_a(srv_fsp == nullptr);
-  srv_fsp = FSP::create(log_sys, srv_fil, srv_buf_pool);
+  srv_fsp = FSP::create(state.log_sys, srv_fil, srv_buf_pool);
 
   ut_a(srv_trx_sys == nullptr);
   srv_trx_sys = Trx_sys::create(srv_fsp);
@@ -604,7 +606,7 @@ ib_err_t InnoDB::start() noexcept {
     }
 
     if (i == 0) {
-      log_sys->group_init(i, srv_config.m_n_log_files, srv_config.m_log_file_size * UNIV_PAGE_SIZE, SRV_LOG_SPACE_FIRST_ID);
+      state.log_sys->group_init(i, srv_config.m_n_log_files, srv_config.m_log_file_size * UNIV_PAGE_SIZE, SRV_LOG_SPACE_FIRST_ID);
     }
 
     if ((log_opened && create_new_db) || (log_opened && log_created)) {
@@ -638,11 +640,11 @@ ib_err_t InnoDB::start() noexcept {
       return DB_ERROR;
     }
 
-    log_sys->acquire();;
+    state.log_sys->acquire();;
 
     recv_reset_logs(max_flushed_lsn, true);
 
-    log_sys->release();
+    state.log_sys->release();
   }
 
   if (create_new_db) {
@@ -730,7 +732,7 @@ ib_err_t InnoDB::start() noexcept {
       }
 
       /* Flush the modified pages to disk and make a checkpoint */
-      log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
+      state.log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
     }
 
   } else {
@@ -960,8 +962,8 @@ static bool srv_threads_shutdown() noexcept {
 }
 
 static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutdown) noexcept {
-  ut_a(log_sys != nullptr);
-  ut_a(UT_LIST_GET_LEN(log_sys->m_log_groups) > 0);
+  ut_a(state.log_sys != nullptr);
+  ut_a(UT_LIST_GET_LEN(state.log_sys->m_log_groups) > 0);
 
   if (srv_print_verbose_log) {
     log_info("Starting shutdown...");
@@ -1010,7 +1012,7 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
       InnoDB deduces from the stamps if the previous shutdown was
       clean. */
 
-      log_sys->buffer_flush_to_disk();
+      state.log_sys->buffer_flush_to_disk();
 
       mutex_exit(&kernel_mutex);
 
@@ -1027,36 +1029,36 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
 
     mutex_exit(&kernel_mutex);
 
-    log_sys->acquire();
+    state.log_sys->acquire();
 
-    if (log_sys->m_n_pending_checkpoint_writes || log_sys->m_n_pending_writes) {
+    if (state.log_sys->m_n_pending_checkpoint_writes || state.log_sys->m_n_pending_writes) {
 
-      log_sys->release();
+      state.log_sys->release();
 
       continue;
     }
 
-    log_sys->release();
+    state.log_sys->release();
 
     if (srv_buf_pool->is_io_pending()) {
 
       continue;
     }
 
-    log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
+    state.log_sys->make_checkpoint_at(IB_UINT64_T_MAX, true);
 
-    log_sys->acquire();
+    state.log_sys->acquire();
 
-    lsn = log_sys->m_lsn;
+    lsn = state.log_sys->m_lsn;
 
-    if (lsn != log_sys->m_last_checkpoint_lsn) {
+    if (lsn != state.log_sys->m_last_checkpoint_lsn) {
 
-      log_sys->release();
+      state.log_sys->release();
 
       continue;
     }
 
-    log_sys->release();
+    state.log_sys->release();
 
     mutex_enter(&kernel_mutex);
 
@@ -1087,7 +1089,7 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
   srv_shutdown_state = SRV_SHUTDOWN_LAST_PHASE;
 
   /* Make some checks that the server really is quiet */
-  ut_a(lsn == log_sys->m_lsn);
+  ut_a(lsn == state.log_sys->m_lsn);
   ut_a(srv_buf_pool->all_freed());
   ut_a(srv_n_threads_active[SRV_MASTER] == 0);
 
@@ -1112,7 +1114,7 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
   /* Make some checks that the server really is quiet */
   ut_a(srv_n_threads_active[SRV_MASTER] == 0);
   ut_a(srv_buf_pool->all_freed());
-  ut_a(lsn == log_sys->m_lsn);
+  ut_a(lsn == state.log_sys->m_lsn);
 }
 
 db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
@@ -1136,7 +1138,7 @@ db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
   }
 
   /* Only if the redo log systemhas been initialized. */
-  if (log_sys != nullptr && UT_LIST_GET_LEN(log_sys->m_log_groups) > 0) {
+  if (state.log_sys != nullptr && UT_LIST_GET_LEN(state.log_sys->m_log_groups) > 0) {
     srv_prepare_for_shutdown(srv_config.m_force_recovery, shutdown);
   }
 
@@ -1150,7 +1152,7 @@ db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
 
   srv_threads_shutdown();
 
-  log_sys->shutdown();
+  state.log_sys->shutdown();
 
   Row_insert::destroy(srv_row_ins);
 
@@ -1191,7 +1193,7 @@ db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
   /* 5. Free all allocated memory */
   pars_close();
 
-  Log::destroy(log_sys);
+  Log::destroy(state.log_sys);
 
   delete srv_buf_pool;
   srv_buf_pool = nullptr;

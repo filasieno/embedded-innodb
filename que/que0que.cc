@@ -22,17 +22,18 @@ Query graph
 Created 5/27/1996 Heikki Tuuri
 *******************************************************/
 
+#include "que0que.h"
 #include "eval0eval.h"
 #include "eval0proc.h"
 #include "log0log.h"
 #include "pars0types.h"
-#include "que0que.h"
 #include "row0ins.h"
 #include "row0purge.h"
 #include "row0sel.h"
 #include "row0undo.h"
 #include "row0upd.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "trx0roll.h"
 #include "trx0trx.h"
 #include "usr0sess.h"
@@ -1024,7 +1025,7 @@ static void que_run_threads_low(que_thr_t *thr) {
     more than about 4 pages, checks must be made also within the query
     step! */
 
-    log_sys->free_check();
+    state.log_sys->free_check();
 
     /* Perform the actual query step: note that the query thread
     may change if, e.g., a subprocedure call is made */

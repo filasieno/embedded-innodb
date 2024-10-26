@@ -1223,7 +1223,7 @@ static void srv_refresh_innodb_monitor_stats() noexcept {
 
   os_file_refresh_stats();
 
-  log_sys->refresh_stats();
+  state.log_sys->refresh_stats();
 
   srv_buf_pool->refresh_io_stats();
 
@@ -1681,7 +1681,7 @@ loop:
   /* Try to track a strange bug reported by Harald Fuchs and others,
   where the lsn seems to decrease at times */
 
-  auto new_lsn = log_sys->get_lsn();
+  auto new_lsn = state.log_sys->get_lsn();
 
   if (new_lsn < old_lsn) {
     log_err(std::format(
@@ -1781,7 +1781,7 @@ static void srv_sync_log_buffer_in_background() {
   srv_main_thread_op_info = "flushing log";
 
   if (difftime(current_time, srv_last_log_flush_time) >= 1) {
-    log_sys->buffer_sync_in_background(true);
+    state.log_sys->buffer_sync_in_background(true);
     srv_last_log_flush_time = current_time;
     srv_log_writes_and_flush++;
   }
@@ -1818,7 +1818,7 @@ loop:
 
   srv_main_thread_op_info = "reserving kernel mutex";
 
-  n_ios_very_old = log_sys->m_n_log_ios + srv_buf_pool->m_stat.n_pages_read + srv_buf_pool->m_stat.n_pages_written;
+  n_ios_very_old = state.log_sys->m_n_log_ios + srv_buf_pool->m_stat.n_pages_read + srv_buf_pool->m_stat.n_pages_written;
   mutex_enter(&kernel_mutex);
 
   /* Store the user activity counter at the start of this loop */
@@ -1872,11 +1872,11 @@ loop:
     srv_sync_log_buffer_in_background();
 
     srv_main_thread_op_info = "making checkpoint";
-    log_sys->free_check();
+    state.log_sys->free_check();
 
-    n_pend_ios = srv_buf_pool->get_n_pending_ios() + log_sys->m_n_pending_writes;
+    n_pend_ios = srv_buf_pool->get_n_pending_ios() + state.log_sys->m_n_pending_writes;
 
-    n_ios = log_sys->m_n_log_ios + srv_buf_pool->m_stat.n_pages_read + srv_buf_pool->m_stat.n_pages_written;
+    n_ios = state.log_sys->m_n_log_ios + srv_buf_pool->m_stat.n_pages_read + srv_buf_pool->m_stat.n_pages_written;
 
     if (unlikely(srv_buf_pool->get_modified_ratio_pct() > srv_config.m_max_buf_pool_modified_pct)) {
 
@@ -1929,8 +1929,8 @@ loop:
   loop above requests writes for that case. The writes done here
   are not required, and may be disabled. */
 
-  n_pend_ios = srv_buf_pool->get_n_pending_ios() + log_sys->m_n_pending_writes;
-  n_ios = log_sys->m_n_log_ios + srv_buf_pool->m_stat.n_pages_read + srv_buf_pool->m_stat.n_pages_written;
+  n_pend_ios = srv_buf_pool->get_n_pending_ios() + state.log_sys->m_n_pending_writes;
+  n_ios = state.log_sys->m_n_log_ios + srv_buf_pool->m_stat.n_pages_read + srv_buf_pool->m_stat.n_pages_written;
 
   ++srv_main_10_second_loops;
 
@@ -1987,7 +1987,7 @@ loop:
   /* Make a new checkpoint about once in 10 seconds */
 
   {
-    auto success = log_sys->checkpoint(true, false);
+    auto success = state.log_sys->checkpoint(true, false);
 
     if (!success) {
       log_info("Checkpoint already running");
@@ -2099,7 +2099,7 @@ flush_loop:
   srv_main_thread_op_info = "making checkpoint";
 
   {
-    auto success = log_sys->checkpoint(true, false);
+    auto success = state.log_sys->checkpoint(true, false);
 
     if (!success) {
       log_info("Checkpoint already running");

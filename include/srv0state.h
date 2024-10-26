@@ -34,6 +34,8 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 #include <fil0fil.h>
 #include <innodb0types.h>
 
+struct Log;
+
 /// Define a single InnoDB global state type.
 /// The type holds defines the state of a single instace of the InnoDB.
 /// All fields will be prefixed to highlight the module the defines it.
@@ -42,6 +44,7 @@ struct InnoDB_state {
   // DB Components
   // ------------------------------------------------------------------------
   AIO *srv_aio;
+  Log *log_sys;
 
   // ------------------------------------------------------------------------
   // Sys and Srv files

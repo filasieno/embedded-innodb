@@ -29,6 +29,7 @@ Created 11/26/1995 Heikki Tuuri
 #include "log0recv.h"
 #include "mtr0log.h"
 #include "page0types.h"
+#include "srv0state.h"
 
 /**
  * Releases the item in the slot given.
@@ -131,7 +132,7 @@ static void mtr_log_reserve_and_write(mtr_t *mtr, Log* log, ulint recovery) noex
     /* Do nothing */
   }
 
-  mtr->m_end_lsn = log->close(ib_recovery_t(recovery));
+  mtr->m_end_lsn = log->close(static_cast<ib_recovery_t>(recovery));
 }
 
 void mtr_t::commit() noexcept {
@@ -143,7 +144,7 @@ void mtr_t::commit() noexcept {
   const auto write_log = m_modifications > 0 && m_n_log_recs > 0;
 
   if (write_log) {
-    mtr_log_reserve_and_write(this, log_sys, srv_config.m_force_recovery);
+    mtr_log_reserve_and_write(this, state.log_sys, srv_config.m_force_recovery);
   }
 
   /* We first update the modification info to buffer pages, and only
@@ -157,7 +158,7 @@ void mtr_t::commit() noexcept {
   mtr_memo_pop_all(this);
 
   if (write_log) {
-    log_sys->release();
+    state.log_sys->release();
   }
 
   m_state = MTR_COMMITTED;

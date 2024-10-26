@@ -2406,9 +2406,9 @@ bool Fil::aio_wait(ulint segment) {
   open, and use a special i/o thread to serve insert buffer requests. */
 
   if (io_ctx.m_fil_node->m_space->m_type == FIL_TABLESPACE) {
-    srv_buf_pool->io_complete(reinterpret_cast<Buf_page *>(io_ctx.m_msg));
+    srv_buf_pool->io_complete(static_cast<Buf_page *>(io_ctx.m_msg));
   } else {
-    log_sys->io_complete(reinterpret_cast<log_group_t *>(io_ctx.m_msg));
+    state.log_sys->io_complete(static_cast<log_group_t *>(io_ctx.m_msg));
   }
 
   return true;

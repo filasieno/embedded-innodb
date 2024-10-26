@@ -32,6 +32,7 @@ Created 3/14/1997 Heikki Tuuri
 #include "row0row.h"
 #include "row0upd.h"
 #include "row0vers.h"
+#include "srv0state.h"
 #include "trx0purge.h"
 #include "trx0rec.h"
 #include "trx0roll.h"
@@ -198,7 +199,7 @@ static bool row_purge_remove_sec_if_poss_low(purge_node_t *node, Index *index, c
   mtr_t mtr;
   mtr_t mtr_vers;
 
-  log_sys->free_check();
+  state.log_sys->free_check();
 
   mtr.start();
 

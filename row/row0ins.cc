@@ -22,6 +22,7 @@ Insert into a table
 Created 4/20/1996 Heikki Tuuri
 *******************************************************/
 
+#include "row0ins.h"
 #include "api0misc.h"
 #include "btr0blob.h"
 #include "btr0btr.h"
@@ -35,10 +36,10 @@ Created 4/20/1996 Heikki Tuuri
 #include "mach0data.h"
 #include "que0que.h"
 #include "rem0cmp.h"
-#include "row0ins.h"
 #include "row0row.h"
 #include "row0sel.h"
 #include "row0upd.h"
+#include "srv0state.h"
 #include "trx0undo.h"
 #include "usr0sess.h"
 
@@ -1488,7 +1489,7 @@ db_err Row_insert::index_entry_low(ulint mode, const Index *index, DTuple *entry
   big_rec_t *big_rec = nullptr;
   Btree_cursor btr_cur(m_dict->m_store.m_fsp, m_dict->m_store.m_btree);
 
-  log_sys->free_check();
+  state.log_sys->free_check();
 
   mtr_t mtr;
 
