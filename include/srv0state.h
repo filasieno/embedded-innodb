@@ -31,12 +31,15 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 #ifndef SRV0STATE_H
 #define SRV0STATE_H
 
+#include <fil0fil.h>
 #include <innodb0types.h>
 
 /// Define a single InnoDB global state type.
 /// The type holds defines the state of a single instace of the InnoDB.
 /// All fields will be prefixed to highlight the module the defines it.
 struct InnoDB_state {
+  Fil *sys_fil;
+  Fil *srv_fil;
 
   // OS file State
   ulint os_n_file_reads;
@@ -60,7 +63,5 @@ struct InnoDB_state {
 };
 
 extern InnoDB_state state;
-
-
 
 #endif //SRV0STATE_H

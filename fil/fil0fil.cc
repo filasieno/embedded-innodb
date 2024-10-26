@@ -100,8 +100,7 @@ out of the LRU-list and keep a count of pending operations. When an operation
 completes, we decrement the count and return the file node to the LRU-list if
 the count drops to zero. */
 
-// FIXME: Remove this global variable
-Fil *srv_fil;
+
 
 extern AIO *srv_aio;
 
@@ -553,7 +552,10 @@ try_again:
 
     mutex_exit(&m_mutex);
 
-    space_free(namesake_id, false);
+    if (space_free(namesake_id, false)) {
+      //TODO: Unhandled case
+      ut_error;
+    }
 
     goto try_again;
   }
@@ -834,7 +836,10 @@ void Fil::close_all_files() {
 
     space = UT_LIST_GET_NEXT(m_space_list, space);
 
-    space_free(prev_space->m_id, true);
+    if(space_free(prev_space->m_id, true)) {
+      // TODO:  Unhandled case
+      ut_error;
+    }
   }
 
   mutex_exit(&m_mutex);
@@ -859,11 +864,17 @@ db_err Fil::write_lsn_and_arch_no_to_file(ulint sum_of_sizes, lsn_t lsn) {
   auto ptr = static_cast<byte *>(mem_alloc(2 * UNIV_PAGE_SIZE));
   auto buf = static_cast<byte *>(ut_align(ptr, UNIV_PAGE_SIZE));
 
-  io(IO_request::Sync_read, false, SYS_TABLESPACE, sum_of_sizes, 0, UNIV_PAGE_SIZE, buf, nullptr);
+  if (io(IO_request::Sync_read, false, SYS_TABLESPACE, sum_of_sizes, 0, UNIV_PAGE_SIZE, buf, nullptr) != DB_SUCCESS) {
+    //TODO: unhandled error case
+    ut_error;
+  }
 
   mach_write_to_8(buf + FIL_PAGE_FILE_FLUSH_LSN, lsn);
 
-  io(IO_request::Sync_read, false, SYS_TABLESPACE, sum_of_sizes, 0, UNIV_PAGE_SIZE, buf, nullptr);
+  if (io(IO_request::Sync_read, false, SYS_TABLESPACE, sum_of_sizes, 0, UNIV_PAGE_SIZE, buf, nullptr) != DB_SUCCESS) {
+    //TODO: unhandled error case
+    ut_error;
+  }
 
   mem_free(ptr);
 
@@ -871,8 +882,6 @@ db_err Fil::write_lsn_and_arch_no_to_file(ulint sum_of_sizes, lsn_t lsn) {
 }
 
 db_err Fil::write_flushed_lsn_to_data_files(lsn_t lsn) {
-  ulint sum_of_sizes;
-
   mutex_enter(&m_mutex);
 
   auto space = UT_LIST_GET_FIRST(m_space_list);
@@ -885,7 +894,7 @@ db_err Fil::write_flushed_lsn_to_data_files(lsn_t lsn) {
     always open. */
 
     if (space->m_type == FIL_TABLESPACE && space->m_id == 0) {
-      sum_of_sizes = 0;
+      ulint sum_of_sizes = 0;
 
       auto node = UT_LIST_GET_FIRST(space->m_chain);
 

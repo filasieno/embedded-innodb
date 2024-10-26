@@ -3949,7 +3949,10 @@ ib_err_t ib_database_drop(const char *dbname) {
 
   /* Only necessary if file per table is set. */
   if (err == DB_SUCCESS && srv_config.m_file_per_table) {
-    srv_fil->rmdir(ptr);
+    if (srv_fil->rmdir(ptr)) {
+      //TODO: Unhandled case
+      ut_error;
+    }
   }
 
   mem_free(ptr);

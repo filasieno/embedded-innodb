@@ -193,7 +193,10 @@ bool DBLWR::check_if_exists(Fil *fil, std::pair<page_no_t, page_no_t> &offsets) 
 
   /* Read the trx sys header to check if we are using the doublewrite buffer */
 
-  fil->io(IO_request::Sync_read, false, SYS_TABLESPACE, TRX_SYS_PAGE_NO, 0, UNIV_PAGE_SIZE, page, nullptr);
+  if (fil->io(IO_request::Sync_read, false, SYS_TABLESPACE, TRX_SYS_PAGE_NO, 0, UNIV_PAGE_SIZE, page, nullptr) != DB_SUCCESS) {
+    //TODO: Unhandled error case
+    ut_error;
+  }
 
   auto dblwr = page + SYS_DOUBLEWRITE;
   auto exists = mach_read_from_4(dblwr + SYS_DOUBLEWRITE_MAGIC) == SYS_DOUBLEWRITE_MAGIC_N;
@@ -218,7 +221,10 @@ void DBLWR::recover_pages() noexcept {
   /* Read the trx sys header to check if we are using the doublewrite buffer.
    * Note: We bypass the buffer pool here.*/
 
-  m_fsp->m_fil->io(IO_request::Sync_read, false, SYS_TABLESPACE, TRX_SYS_PAGE_NO, 0, UNIV_PAGE_SIZE, read_buf, nullptr);
+  if (m_fsp->m_fil->io(IO_request::Sync_read, false, SYS_TABLESPACE, TRX_SYS_PAGE_NO, 0, UNIV_PAGE_SIZE, read_buf, nullptr) != DB_SUCCESS) {
+    //TODO: Unhandled error case
+    ut_error;
+  }
 
   {
     const auto dblwr = read_buf + SYS_DOUBLEWRITE;
@@ -231,7 +237,7 @@ void DBLWR::recover_pages() noexcept {
 
   /* Read the pages from both the doublewrite buffers into memory */
 
-  m_fsp->m_fil->io(
+  if (m_fsp->m_fil->io(
     IO_request::Sync_read,
     false,
     SYS_TABLESPACE,
@@ -239,9 +245,12 @@ void DBLWR::recover_pages() noexcept {
     0,
     SYS_DOUBLEWRITE_BLOCK_SIZE * UNIV_PAGE_SIZE,
     buf,
-    nullptr);
+    nullptr) != DB_SUCCESS) {
+      //TODO: Unhandled error case
+      ut_error;
+  }
 
-  m_fsp->m_fil->io(
+  if (m_fsp->m_fil->io(
     IO_request::Sync_read,
     false,
     SYS_TABLESPACE,
@@ -249,8 +258,10 @@ void DBLWR::recover_pages() noexcept {
     0,
     SYS_DOUBLEWRITE_BLOCK_SIZE * UNIV_PAGE_SIZE,
     buf + SYS_DOUBLEWRITE_BLOCK_SIZE * UNIV_PAGE_SIZE,
-    nullptr
-  );
+    nullptr) != DB_SUCCESS) {
+    //TODO: Unhandled error case
+    ut_error;
+  };
 
   /* Check if any of these pages is half-written in data files, in the intended
    * position */
@@ -277,7 +288,10 @@ void DBLWR::recover_pages() noexcept {
       /* It is an unwritten doublewrite buffer page: do nothing */
     } else {
       /* Read in the actual page from the file */
-      m_fsp->m_fil->io(IO_request::Sync_read, false, space_id, page_no, 0, UNIV_PAGE_SIZE, read_buf, nullptr);
+      if (m_fsp->m_fil->io(IO_request::Sync_read, false, space_id, page_no, 0, UNIV_PAGE_SIZE, read_buf, nullptr) != DB_SUCCESS) {
+        //TODO: Unhandled error case
+        ut_error;
+      }
 
       /* Check if the page is corrupt */
 
@@ -306,7 +320,10 @@ void DBLWR::recover_pages() noexcept {
         /* Write the good page from the doublewrite buffer to the intended
          * position */
 
-        m_fsp->m_fil->io(IO_request::Sync_write, false, space_id, page_no, 0, UNIV_PAGE_SIZE, page, nullptr);
+        if (m_fsp->m_fil->io(IO_request::Sync_write, false, space_id, page_no, 0, UNIV_PAGE_SIZE, page, nullptr) != DB_SUCCESS) {
+          //TODO: Unhandled error case
+          ut_error;
+        }
 
         log_info("Recovered the page from the doublewrite buffer.");
       }

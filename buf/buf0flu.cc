@@ -391,7 +391,10 @@ void Buf_flush::buffered_writes(DBLWR *dblwr) {
 
   ulint i{};
 
-  srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block1, 0, len, write_buf, nullptr);
+  if (srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block1, 0, len, write_buf, nullptr) != DB_SUCCESS) {
+    //TODO: Unhandled error case
+    ut_error;
+  }
 
   for (len2 = 0; len2 + UNIV_PAGE_SIZE <= len; len2 += UNIV_PAGE_SIZE, i++) {
     const Buf_block *block = reinterpret_cast<Buf_block *>(dblwr->m_bpages[i]);
@@ -417,7 +420,10 @@ void Buf_flush::buffered_writes(DBLWR *dblwr) {
   write_buf = dblwr->m_write_buf + SYS_DOUBLEWRITE_BLOCK_SIZE * UNIV_PAGE_SIZE;
   ut_ad(i == SYS_DOUBLEWRITE_BLOCK_SIZE);
 
-  srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block2, 0, len, (void *)write_buf, nullptr);
+  if(srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block2, 0, len, (void *)write_buf, nullptr) != DB_SUCCESS) {
+    //TODO: Unhandled error case
+    ut_error;
+  }
 
   for (len2 = 0; len2 + UNIV_PAGE_SIZE <= len; len2 += UNIV_PAGE_SIZE, i++) {
     const Buf_block *block = reinterpret_cast<Buf_block *>(dblwr->m_bpages[i]);
@@ -457,7 +463,7 @@ flush:
       ));
     }
 
-    srv_fil->io(
+    if (srv_fil->io(
       IO_request::Async_write,
       true,
       block->get_space(),
@@ -466,7 +472,10 @@ flush:
       UNIV_PAGE_SIZE,
       (void *)block->m_frame,
       (void *)block
-    );
+    ) != DB_SUCCESS) {
+      //TODO: Unhandled error case
+      ut_error;
+    }
 
     /* Increment the counter of I/O operations used
     for selecting LRU policy. */
@@ -564,7 +573,10 @@ void Buf_flush::write_block_low(DBLWR *dblwr, Buf_page *bpage) {
   }
 
   if (!srv_config.m_use_doublewrite_buf || dblwr == nullptr) {
-    srv_fil->io(IO_request::Async_write, true, bpage->get_space(), bpage->get_page_no(), 0, UNIV_PAGE_SIZE, frame, bpage);
+    if (srv_fil->io(IO_request::Async_write, true, bpage->get_space(), bpage->get_page_no(), 0, UNIV_PAGE_SIZE, frame, bpage) != DB_SUCCESS) {
+      //TODO: Unhandled error case
+      ut_error;
+    }
   } else {
     post_to_doublewrite_buf(dblwr, bpage);
   }

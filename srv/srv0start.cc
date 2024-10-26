@@ -767,7 +767,10 @@ ib_err_t InnoDB::start() noexcept {
 
     /* Recursively scan to a depth of 2. InnoDB needs to do this because the DD
     can't be accessed until recovery is done. So we have this simplistic scheme. */
-    srv_fil->load_single_table_tablespaces(srv_config.m_data_home, srv_config.m_force_recovery, 2);
+    if(srv_fil->load_single_table_tablespaces(srv_config.m_data_home, srv_config.m_force_recovery, 2) != DB_SUCCESS) {
+      //TODO: Unhandled error case
+      ut_error;
+    }
 
     /* We always instantiate the DBLWR buffer. Restore the pages in data files,
      * and restore them from the doublewrite buffer if possible */
@@ -1097,7 +1100,10 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
 
   srv_shutdown_lsn = lsn;
 
-  srv_fil->write_flushed_lsn_to_data_files(lsn);
+  if (srv_fil->write_flushed_lsn_to_data_files(lsn) != DB_SUCCESS) {
+    //TODO: Unhadled error case
+    ut_error;
+  }
 
   srv_fil->flush_file_spaces(FIL_TABLESPACE);
 

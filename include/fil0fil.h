@@ -26,7 +26,7 @@ Created 10/25/1995 Heikki Tuuri
 
 #include "innodb0types.h"
 
-#include "dict0types.h"
+// #include "dict0types.h"
 #include "fil0types.h"
 #include "mtr0types.h"
 #include "os0aio.h"
@@ -78,7 +78,7 @@ struct Fil {
   @param[in] name                 Tablespace name
   @param[in] space_id             Tablespace ID
   @param[in] flags                Tablespace flags
-  @param[in] purpose              FIL_TABLESPACE, or FIL_LOG if log
+  @param[in] type              FIL_TABLESPACE, or FIL_LOG if log
   @return	true if success */
   bool space_create(const char *name, space_id_t space_id, ulint flags, Fil_type type);
 
@@ -86,13 +86,13 @@ struct Fil {
   memory cache.
   @param[in] space_id             Tablespace ID
   @return	space size, 0 if space not found */
-  ulint space_get_size(space_id_t space_id);
+  [[nodiscard]] ulint space_get_size(space_id_t space_id);
 
   /** Returns the flags of the space. The tablespace must be cached
   in the memory cache.
-  @param[in] space_id             Tablespace ID
+  @param[in] id             Tablespace ID
   @return	flags, ULINT_UNDEFINED if space not found */
-  ulint space_get_flags(space_id_t id);
+  [[nodiscard]] ulint space_get_flags(space_id_t id);
 
   /** Checks if the pair space, page_no refers to an existing page in a tablespace
   file space. The tablespace must be cached in the memory cache.
@@ -121,12 +121,12 @@ struct Fil {
   header of the first page of each data file in the system tablespace.
   @param[in] lsn                  LSN to write.
   @return	DB_SUCCESS or error number */
-  db_err write_flushed_lsn_to_data_files(lsn_t lsn);
+  [[nodiscard]] db_err write_flushed_lsn_to_data_files(lsn_t lsn);
 
   /** Reads the flushed lsn and arch no fields from a data file at database
   startup.
   @param[in] fh                    Open data file handle
-  @param[out] flushed_lsn          Maximum flushed LSN */
+  @param[out] max_flushed_lsn      Maximum flushed LSN */
   void read_flushed_lsn(os_file_t fh, lsn_t &max_flushed_lsn);
 
    /** Parses the body of a log record written about an .ibd file operation. That
@@ -152,7 +152,7 @@ struct Fil {
                                 not replayed
    @param[in] log_flags         redo log flags (stored in the page number
                                 parameter) */
-   byte *op_log_parse_or_replay(
+   [[nodiscard]] byte *op_log_parse_or_replay(
      byte *ptr,
      byte *end_ptr,
      ulint type,
@@ -163,7 +163,7 @@ struct Fil {
    memory cache.
    @param[in] space_id          Tablespace ID
    @return	true if success */
-   bool delete_tablespace(space_id_t space_id);
+   [[nodiscard]] bool delete_tablespace(space_id_t space_id);
 
    /** Discards a single-table tablespace. The tablespace must be cached in the
    memory cache. Discarding is like deleting a tablespace, but
@@ -176,7 +176,7 @@ struct Fil {
 
    @param[in] space_id          Tablespace ID
    @return	true if success */
-   bool discard_tablespace(space_id_t space_id);
+   [[nodiscard]] bool discard_tablespace(space_id_t space_id);
 
    /** Renames a single-table tablespace. The tablespace must be cached in the
    tablespace memory cache.
@@ -190,7 +190,7 @@ struct Fil {
                                 databasename/tablename format of InnoDB
 
    @return	true if success */
-   bool rename_tablespace(const char *old_name, space_id_t space_id, const char *new_name);
+   [[nodiscard]] bool rename_tablespace(const char *old_name, space_id_t space_id, const char *new_name);
 
   /** Creates a new single-table tablespace in a database directory.
   The datadir is the current directory of a running program. We can
@@ -198,7 +198,7 @@ struct Fil {
         CREATE TEMPORARY TABLE
   we place in the configured TEMP dir of the application.
 
-  @param[in,out] space_id,      Space id; if this is != 0, then this is an
+  @param[in,out] space_id       Space id; if this is != 0, then this is an
                                 input parameter, otherwise output
   @param[in] tablename          The table name in the usual
                                 databasename/tablename format of InnoDB,
@@ -206,10 +206,10 @@ struct Fil {
   @param[in] is_temp            true if a table created with
                                 CREATE TEMPORARY TABLE
   @param[in] flags              Tablespace flags
-  @param[in] size);             The initial size of the tablespace file
+  @param[in] size               The initial size of the tablespace file
                                 in pages, must be >= FIL_IBD_FILE_INITIAL_SIZE
   @return	DB_SUCCESS or error code */
-  db_err create_new_single_table_tablespace(
+  [[nodiscard]] db_err create_new_single_table_tablespace(
     space_id_t *space_id,
     const char *tablename,
     bool is_temp,
@@ -236,7 +236,7 @@ struct Fil {
    *
    * @return true if success
    */
-  bool open_single_table_tablespace(bool check_space_id, space_id_t space_id, ulint flags, const char *name);
+  [[nodiscard]] bool open_single_table_tablespace(bool check_space_id, space_id_t space_id, ulint flags, const char *name);
 
   /**
    * At the server startup, if we need crash recovery, scans the database
@@ -252,7 +252,7 @@ struct Fil {
    *
    * @return  DB_SUCCESS or error number
    */
-  db_err load_single_table_tablespaces(const std::string &path, ib_recovery_t recovery, size_t max_depth);
+  [[nodiscard]] db_err load_single_table_tablespaces(const std::string &path, ib_recovery_t recovery, size_t max_depth);
 
   /** If we need crash recovery, and we have called
   load_single_table_tablespaces() and dict_load_single_table_tablespaces(),
@@ -271,23 +271,23 @@ struct Fil {
    *
    * @return true if does not exist or is being deleted
    */
-  bool tablespace_deleted_or_being_deleted_in_mem(space_id_t space_id, int64_t version);
+  [[nodiscard]] bool tablespace_deleted_or_being_deleted_in_mem(space_id_t space_id, int64_t version);
 
   /**
    * Returns true if a single-table tablespace exists in the memory cache.
    *
-   * @param[in] Space_id    Space id
+   * @param[in] space_id    Space id
    *
    * @return true if exists
    */
-  bool tablespace_exists_in_mem(space_id_t space_id);
+  [[nodiscard]] bool tablespace_exists_in_mem(space_id_t space_id);
 
   /**
    * Returns true if a matching tablespace exists in the InnoDB tablespace memory
    * cache. Note that if we have not done a crash recovery at the database startup,
    * there may be many tablespaces which are not yet in the memory cache.
    *
-   * @param[in] space_id          space id
+   * @param[in] id                space id
    * @param[in] name              table name in the standard 'databasename/tablename'
    *                              format or the dir path to a temp table
    * @param[in] is_temp           true if created with CREATE TEMPORARY TABLE
@@ -299,7 +299,7 @@ struct Fil {
    *
    * @return true if a matching tablespace exists in the memory cache
    */
-  bool space_for_table_exists_in_mem(
+  [[nodiscard]] bool space_for_table_exists_in_mem(
     space_id_t id,
     const char *name,
     bool is_temp,
@@ -321,7 +321,7 @@ struct Fil {
    *
    * @return true if success
    */
-  bool extend_space_to_desired_size(page_no_t *actual_size, space_id_t space_id, page_no_t size_after_extend);
+  [[nodiscard]] bool extend_space_to_desired_size(page_no_t *actual_size, space_id_t space_id, page_no_t size_after_extend);
 
   /**
    * Tries to reserve free extents in a file space.
@@ -332,24 +332,24 @@ struct Fil {
    *
    * @return true if succeed
    */
-  bool space_reserve_free_extents(space_id_t space_id, ulint n_free_now, ulint n_to_reserve);
+  [[nodiscard]] bool space_reserve_free_extents(space_id_t space_id, ulint n_free_now, ulint n_to_reserve);
 
   /**
    * Releases free extents in a file space.
    *
-   * @param[in] space_id          Space id
+   * @param[in] id          Space id
    * @param[in] n_reserved        How many one reserved
    */
   void space_release_free_extents(space_id_t id, ulint n_reserved);
 
-  /* *
+  /**
    * Gets the number of reserved extents. If the database is silent, this number should be zero.
    *
    * @param[in] space_id          Space id
    *
    * @return Number of reserved extents
    */
-  ulint space_get_n_reserved_extents(space_id_t space_id);
+  [[nodiscard]] ulint space_get_n_reserved_extents(space_id_t space_id);
 
   /**
    * Reads or writes data. This operation is asynchronous (aio).
@@ -361,7 +361,7 @@ struct Fil {
    *                              all have been posted: use with great
    *                              caution!
    * @param space_id              in: space id
-   * @param block_offset          in: offset in number of blocks
+   * @param page_no               in: offset in number of blocks
    * @param byte_offset           in: remainder of offset in bytes; in
    *                              aio this must be divisible by the OS block size
    * @param len                   in: how many bytes to read or write; this
@@ -375,7 +375,7 @@ struct Fil {
    * @return DB_SUCCESS, or DB_T ABLESPACE_DELETED if we are trying to do
    *         i/o on a tablespace which does not exist
    */
-  db_err io(
+  [[nodiscard]] db_err io(
     IO_request io_request,
     bool batched,
     space_id_t space_id,
@@ -394,7 +394,7 @@ struct Fil {
    * @param[in] segment           The number of the segmentto wait for
    * @return false if AIO reaper was shutdown
    */
-  bool aio_wait(ulint segment);
+  [[nodiscard]] bool aio_wait(ulint segment);
 
   /**
    * Flushes to disk possible writes cached by the OS. If the space does not
@@ -418,7 +418,7 @@ struct Fil {
    * 
    * @return true if ok
    */
-  bool validate();
+  [[nodiscard]] bool validate();
 
   /**
    * Returns true if file address is undefined.
@@ -426,7 +426,7 @@ struct Fil {
    * @param[in] addr              Address
    * @return true if undefined
    */
-  bool addr_is_null(const Fil_addr& addr);
+  [[nodiscard]] bool addr_is_null(const Fil_addr& addr);
 
   /**
    * Get the predecessor of a file page.
@@ -434,7 +434,7 @@ struct Fil {
    * @param[in] page - file page
    * @return FIL_PAGE_PREV
    */
-  ulint page_get_prev(const byte *page);
+  [[nodiscard]] ulint page_get_prev(const byte *page);
 
   /**
    * Get the successor of a file page.
@@ -442,7 +442,7 @@ struct Fil {
    * @param[in] page               File page
    * @return FIL_PAGE_NEXT
    */
-  ulint page_get_next(const byte *page);
+  [[nodiscard]] ulint page_get_next(const byte *page);
 
   /**
    * Sets the file page type.
@@ -458,7 +458,7 @@ struct Fil {
    * @return type; NOTE that if the type has not been written to page, the
    *         return value not defined
    */
-  static Fil_page_type page_get_type(const byte *page);
+  [[nodiscard]] static Fil_page_type page_get_type(const byte *page);
 
   /**
    * Reset variables.
@@ -470,27 +470,27 @@ struct Fil {
    * @param[in] dbname - database name
    * @return true on success
    */
-  bool rmdir(const char *dbname); /** in: database name */
+  [[nodiscard]] bool rmdir(const char *dbname); /** in: database name */
 
   /**
    * Create the underlying directory where the database .ibd files are stored.
    * @param[in] dbname - database name
    * @return true on success
    */
-  bool mkdir(const char *dbname); /** in: database name */
+  [[nodiscard]] bool mkdir(const char *dbname); /** in: database name */
 
   /** @return Number of pending redo log flushes */
-  ulint get_pending_log_flushes() const {
+  [[nodiscard]] ulint get_pending_log_flushes() const {
     return m_n_pending_log_flushes;
   }
 
   /** @return Number of pending tablespace flushes */
-  ulint get_pending_tablespace_flushes() const {
+  [[nodiscard]] ulint get_pending_tablespace_flushes() const {
     return m_n_pending_tablespace_flushes;
   }
 
   /** @return The number of fsyncs done to the log */
-  ulint get_log_flushes() const {
+  [[nodiscard]] ulint get_log_flushes() const {
     return m_n_log_flushes;
   }
 
@@ -504,7 +504,7 @@ private:
    * @param own_mutex - in: true if own m_mutex
    * @return true if success
    */
-  bool space_free(space_id_t id, bool own_mutex);
+  [[nodiscard]] bool space_free(space_id_t id, bool own_mutex);
 
   /**
    * @brief Remove extraneous '.' && '\' && '/' characters from the prefix.
@@ -514,7 +514,7 @@ private:
    * @param ptr - in: path to normalize
    * @return pointer to normalized path
    */
-  const char *normalize_path(const char *ptr);
+  [[nodiscard]] const char *normalize_path(const char *ptr);
 
   /**
    * @brief Compare two table names.
@@ -527,13 +527,12 @@ private:
    * 
    * @return = 0 if name1 == name2 < 0 if name1 < name2 > 0 if name1 > name2
    */
-  int tablename_compare(const char *name1, const char *name2);
+  [[nodiscard]] int tablename_compare(const char *name1, const char *name2);
 
   /**
    * @brief Updates the data structures when an i/o operation finishes.
    * 
    * @param node - file node
-   * @param system - tablespace memory cache
    * @param io_request - IO_request::Write or IO_request::Read; marks the node as
    *  modified if type == IO_request::Write
    */
@@ -546,7 +545,7 @@ private:
    * @param name - table name in the standard 'databasename/tablename' format
    * @return space id, ULINT_UNDEFINED if not found
    */
-  ulint get_space_id_for_table(const char *name);
+  [[nodiscard]] ulint get_space_id_for_table(const char *name);
 
   /**
    * @brief Returns the table space by a given id, nullptr if not found.
@@ -554,7 +553,7 @@ private:
    * @param space_id space id
    * @return Fil::fil_space_t* table space, nullptr if not found
    */
-  fil_space_t *space_get_by_id(space_id_t space_id);
+  [[nodiscard]] fil_space_t *space_get_by_id(space_id_t space_id);
 
   /**
    * @brief Returns the table space by a given name, nullptr if not found.
@@ -562,7 +561,7 @@ private:
    * @param name in: space name
    * @return Fil::fil_space_t* table space, nullptr if not found
    */
-  fil_space_t *space_get_by_name(const char *name);
+  [[nodiscard]] fil_space_t *space_get_by_name(const char *name);
 
   /**
   * @brief Checks if all the file nodes in a space are flushed.
@@ -570,7 +569,7 @@ private:
   * @param space in: space
   * @return true if all are flushed
   */
-  bool space_is_flushed(fil_space_t *space) ;
+  [[nodiscard]] bool space_is_flushed(fil_space_t *space) ;
 
   /**
    * Opens a the file of a node of a tablespace.
@@ -586,7 +585,6 @@ private:
    * @brief Closes a file.
    *
    * @param node in: file node
-   * @param system in: tablespace memory cache
    */
   void node_close_file(fil_node_t *node);
 
@@ -611,7 +609,7 @@ private:
   by incrementing the global counter. If 4 billion id's is not enough, we may need
   to recycle id's.
   @return	new tablespace id; ULINT_UNDEFINED if could not assign an id */
-  ulint assign_new_space_id();
+  [[nodiscard]] ulint assign_new_space_id();
 
   /**
   * @brief Writes the flushed lsn and the latest archived log number to the page header
@@ -623,7 +621,7 @@ private:
   *
   * @return db_err
   */
-  db_err write_lsn_and_arch_no_to_file(ulint sum_of_sizes, lsn_t lsn);
+  [[nodiscard]] db_err write_lsn_and_arch_no_to_file(ulint sum_of_sizes, lsn_t lsn);
 
   /**
   * @brief Creates the database directory for a table if it does not exist yet.
@@ -665,7 +663,7 @@ private:
    * @param path The new name for the tablespace.
    * @return true if the tablespace was successfully renamed, false otherwise.
    */
-  bool rename_tablespace_in_mem(fil_space_t *space, fil_node_t *node, const char *path);
+  [[nodiscard]] bool rename_tablespace_in_mem(fil_space_t *space, fil_node_t *node, const char *path);
 
   /**
   * @brief Allocates a file name for a single-table tablespace.
@@ -675,7 +673,7 @@ private:
   * @param is_temp True if it is a dir path.
   * @return char* The allocated file name.
   */
-  char *make_ibd_name(const char *name, bool is_temp);
+  [[nodiscard]] char *make_ibd_name(const char *name, bool is_temp);
 
   /**
   * @param recovery recovery flag
@@ -692,7 +690,7 @@ private:
    * @param max_depth The maximum depth of the directory tree to scan
    * @param depth The current depth of the directory tree 
    */
-  db_err scan_and_load_tablespaces(const std::string &dir, ib_recovery_t recovery, ulint max_depth, ulint depth);
+  [[nodiscard]] db_err scan_and_load_tablespaces(const std::string &dir, ib_recovery_t recovery, ulint max_depth, ulint depth);
 
   /**
   * @brief Prepares a file node for i/o. Opens the file if it is closed. Updates the
@@ -724,7 +722,6 @@ private:
     IO_request io_request
   );
 
-private:
   /** The number of fsyncs done to the log */
   ulint m_n_log_flushes{};
 
@@ -776,4 +773,4 @@ private:
   UT_LIST_BASE_NODE_T(fil_space_t, m_space_list) m_space_list;
 };
 
-extern Fil *sys_fil;
+

@@ -684,7 +684,7 @@ void Log::group_file_header_flush(log_group_t *group, ulint nth_file, lsn_t star
 
     ++srv_os_log_pending_writes;
 
-    srv_fil->io(
+    if (srv_fil->io(
       IO_request::Sync_log_write,
       false,
       group->space_id,
@@ -693,7 +693,10 @@ void Log::group_file_header_flush(log_group_t *group, ulint nth_file, lsn_t star
       IB_FILE_BLOCK_SIZE,
       buf,
       nullptr
-    );
+    ) != DB_SUCCESS) {
+      //TODO: Unhandled error case
+      ut_error;
+    };
 
     --srv_os_log_pending_writes;
   }
@@ -738,7 +741,7 @@ void Log::group_write_buf(log_group_t *group, byte *buf, ulint len, lsn_t start_
       ++m_n_log_ios;
       ++srv_os_log_pending_writes;
 
-      srv_fil->io(
+      if (srv_fil->io(
         IO_request::Sync_log_write,
         false,
         group->space_id,
@@ -747,7 +750,10 @@ void Log::group_write_buf(log_group_t *group, byte *buf, ulint len, lsn_t start_
         write_len,
         buf,
         nullptr
-      );
+      ) != DB_SUCCESS) {
+        //TODO: Unhandled error case
+        ut_error;
+      }
 
       --srv_os_log_pending_writes;
 
@@ -1073,7 +1079,7 @@ void Log::group_checkpoint(log_group_t *group) noexcept {
     ++m_n_log_ios;
 
     /* Send the log file write request */
-    srv_fil->io(
+    if (srv_fil->io(
       IO_request::Async_log_write,
       false,
       group->space_id,
@@ -1082,7 +1088,10 @@ void Log::group_checkpoint(log_group_t *group) noexcept {
       IB_FILE_BLOCK_SIZE,
       buf,
       ((byte *)group + 1)
-    );
+    ) != DB_SUCCESS) {
+      //TODO: Unhadled error case
+      ut_error;
+    }
 
     ut_ad(((ulint)group & 0x1UL) == 0);
   }
@@ -1093,7 +1102,7 @@ void Log::group_read_checkpoint_info(log_group_t *group, ulint field) noexcept {
 
   ++m_n_log_ios;
 
-  srv_fil->io(
+  if (srv_fil->io(
     IO_request::Sync_log_read,
     false,
     group->space_id,
@@ -1102,10 +1111,13 @@ void Log::group_read_checkpoint_info(log_group_t *group, ulint field) noexcept {
     IB_FILE_BLOCK_SIZE,
     m_checkpoint_buf,
     nullptr
-  );
+  ) != DB_SUCCESS) {
+    //TODO: Unhandled error case
+    ut_error;
+  }
 }
 
-void Log::groups_write_checkpoint_info(void) noexcept {
+void Log::groups_write_checkpoint_info() noexcept {
   ut_ad(mutex_own(&m_mutex));
 
   for (auto group : m_log_groups) {
@@ -1273,7 +1285,7 @@ void Log::group_read_log_seg(ulint type, byte *buf, log_group_t *group, lsn_t st
 
     ++m_n_log_ios;
 
-    srv_fil->io(
+    if (srv_fil->io(
       type == LOG_RECOVER ? IO_request::Sync_log_read : IO_request::Async_log_read,
       false,
       group->space_id,
@@ -1282,7 +1294,10 @@ void Log::group_read_log_seg(ulint type, byte *buf, log_group_t *group, lsn_t st
       len,
       buf,
       nullptr
-    );
+    ) != DB_SUCCESS) {
+      //TODO: Unhandled error case
+      ut_error;
+    };
 
     start_lsn += len;
     buf += len;

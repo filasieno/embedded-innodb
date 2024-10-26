@@ -302,13 +302,19 @@ db_err Dict_load::open(bool in_crash_recovery) noexcept {
           field = rec_get_nth_field(rec, 7, &len);
           auto is_temp = (mach_read_from_4(field) & DICT_TF2_TEMPORARY) != 0;
 
-          fil->space_for_table_exists_in_mem(space_id, name, is_temp, true, !is_temp);
+          if (fil->space_for_table_exists_in_mem(space_id, name, is_temp, true, !is_temp)) {
+            //TODO: Unhandled case
+            ut_error;
+          }
 
         } else {
           /* It is a normal database startup: create the space object and
           check that the .ibd file exists. */
 
-          fil->open_single_table_tablespace(false, space_id, flags, name);
+          if (!fil->open_single_table_tablespace(false, space_id, flags, name)) {
+            //TODO: Unhandled error case
+            ut_error;
+          }
         }
 
         mem_free(name);
