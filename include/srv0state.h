@@ -38,6 +38,10 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 /// The type holds defines the state of a single instace of the InnoDB.
 /// All fields will be prefixed to highlight the module the defines it.
 struct InnoDB_state {
+  // ------------------------------------------------------------------------
+  // DB Components
+  // ------------------------------------------------------------------------
+  AIO *srv_aio;
 
   // ------------------------------------------------------------------------
   // Sys and Srv files
@@ -58,6 +62,7 @@ struct InnoDB_state {
   // ------------------------------------------------------------------------
   // OS file State
   // ------------------------------------------------------------------------
+
   ulint os_n_file_reads;
   ulint os_n_file_writes;
   ulint os_n_fsyncs;

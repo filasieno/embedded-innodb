@@ -100,10 +100,6 @@ out of the LRU-list and keep a count of pending operations. When an operation
 completes, we decrement the count and return the file node to the LRU-list if
 the count drops to zero. */
 
-
-
-extern AIO *srv_aio;
-
 /** The null file address */
 constexpr Fil_addr fil_addr_null = {FIL_NULL, 0};
 
