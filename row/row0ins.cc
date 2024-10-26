@@ -566,9 +566,9 @@ db_err Row_insert::update_cascade_client(que_thr_t *thr, upd_node_t *node, Table
       --table->m_stats.m_n_rows;
     }
 
-    ++srv_n_rows_deleted;
+    ++state.srv_n_rows_deleted;
   } else {
-    ++srv_n_rows_updated;
+    ++state.srv_n_rows_updated;
   }
 
   ib_update_statistics_if_needed(table);

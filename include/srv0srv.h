@@ -277,11 +277,6 @@ struct Config {
 
 /*-------------------------------------------*/
 
-extern ulint srv_n_rows_inserted;
-extern ulint srv_n_rows_updated;
-extern ulint srv_n_rows_deleted;
-extern ulint srv_n_rows_read;
-
 extern bool srv_print_innodb_monitor;
 extern bool srv_print_innodb_tablespace_monitor;
 extern bool srv_print_verbose_log;

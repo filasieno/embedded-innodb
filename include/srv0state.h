@@ -36,60 +36,82 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 struct Log;
 
-/// Define a single InnoDB global state type.
-/// The type holds defines the state of a single instace of the InnoDB.
-/// All fields will be prefixed to highlight the module the defines it.
+/// @brief Defines the embedded InnoDB State type.
+///
+/// The type defines the state of a single instace of the InnoDB.
 struct InnoDB_state {
+
   /// If the following flag is set true, the module will print trace info
   /// of SQL execution in the UNIV_SQL_DEBUG version
   bool que_trace_on;
 
-  // ------------------------------------------------------------------------
-  // DB Components
-  // ------------------------------------------------------------------------
-  AIO *srv_aio;
-  Log *log_sys;
+  /// Variable counts amount of data read in total (in bytes)
+  ulint srv_data_read{0};
 
-  // ------------------------------------------------------------------------
-  // Sys and Srv files
-  // ------------------------------------------------------------------------
-  Fil *sys_fil;
-  Fil *srv_fil;
+  /// @name Row stats variables
+  /// @brief the row state variables to count row writes (insert, update, delete) and reads
+  /// @{
+  ulint srv_n_rows_inserted_old{0};
+  ulint srv_n_rows_updated_old{0};
+  ulint srv_n_rows_deleted_old{0};
+  ulint srv_n_rows_read_old{0};
 
-  // ------------------------------------------------------------------------
-  // OS Proc
-  // ------------------------------------------------------------------------
+  ulint srv_n_rows_inserted{0};
+  ulint srv_n_rows_updated{0};
+  ulint srv_n_rows_deleted{0};
+  ulint srv_n_rows_read{0};
+  /// @}
+
+  /// @name Database components
+  /// @{
+  AIO *srv_aio{nullptr};
+  Log *log_sys{nullptr};
+  /// @}
+
+  /// @name Database files
+  /// @{
+  Fil *sys_fil{nullptr};
+  Fil *srv_fil{nullptr};
+  /// @}
+
+  /// @name OS InnoDB State varaibles
+  /// @{
 
   /// Use large pages. This may be a boot-time option on some platforms.
-  bool os_use_large_pages;
+  bool os_use_large_pages{false};
 
   /// Large page size. This may be a boot-time option on some platforms
-  ulint os_large_page_size;
+  ulint os_large_page_size{0};
 
-  // ------------------------------------------------------------------------
-  // OS file State
-  // ------------------------------------------------------------------------
+  /// Number of reads from OS files.
+  ulint os_n_file_reads{0};
 
-  ulint os_n_file_reads;
-  ulint os_n_file_writes;
-  ulint os_n_fsyncs;
+  /// Number of writes to OS files.
+  ulint os_n_file_writes{0};
 
-  bool os_has_said_disk_full;
+  /// Number of flushes to OS files.
+  ulint os_n_fsyncs{0};
+  /// true if os has said that the this is full
+  bool os_has_said_disk_full{false};
 
   /// Number of pending os_file_pread() operations
-  std::atomic<ulint> os_file_n_pending_preads;
+  std::atomic<ulint> os_file_n_pending_preads{0};
 
   /// Number of pending os_file_pwrite() operations
-  std::atomic<ulint> os_file_n_pending_pwrites;
+  std::atomic<ulint> os_file_n_pending_pwrites{0};
 
   /// Number of pending read operations
-  std::atomic<ulint> os_n_pending_reads;
+  std::atomic<ulint> os_n_pending_reads{0};
 
   /// Number of pending write operations
-  std::atomic<ulint> os_n_pending_writes;
+  std::atomic<ulint> os_n_pending_writes{0};
 
+  /// @}
 };
 
+/// @brief A transitory global variable used to collect all global variables in InnoDB.
+///
+/// The variable is one of the key elements of the objective to make InnoDB reeentrant.
 extern InnoDB_state state;
 
 #endif //SRV0STATE_H

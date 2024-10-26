@@ -29,14 +29,15 @@ Select node implementation.
 Created 12/19/1997 Heikki Tuuri
 *******************************************************/
 
+#include "row0sel.h"
 #include "api0misc.h"
 #include "api0ucode.h"
 #include "btr0blob.h"
 #include "btr0btr.h"
 #include "btr0cur.h"
 #include "buf0lru.h"
-#include "dict0store.h"
 #include "dict0dict.h"
+#include "dict0store.h"
 #include "eval0eval.h"
 #include "lock0lock.h"
 #include "mach0data.h"
@@ -47,9 +48,9 @@ Created 12/19/1997 Heikki Tuuri
 #include "rem0cmp.h"
 #include "row0prebuilt.h"
 #include "row0row.h"
-#include "row0sel.h"
 #include "row0upd.h"
 #include "row0vers.h"
+#include "srv0state.h"
 #include "trx0trx.h"
 #include "trx0undo.h"
 
@@ -2169,7 +2170,7 @@ db_err Row_sel::mvcc_fetch(ib_recovery_t recovery, ib_srch_mode_t mode, row_preb
     } else if (likely(!is_cache_empty(prebuilt))) {
       err = DB_SUCCESS;
 
-      ++srv_n_rows_read;
+      ++state.srv_n_rows_read;
 
       goto func_exit;
 
@@ -2242,7 +2243,7 @@ db_err Row_sel::mvcc_fetch(ib_recovery_t recovery, ib_srch_mode_t mode, row_preb
 
           mtr.commit();
 
-          ++srv_n_rows_read;
+          ++state.srv_n_rows_read;
 
           prebuilt->result = 0;
 
@@ -2877,7 +2878,7 @@ normal_return:
   }
 
   if (err == DB_SUCCESS) {
-    srv_n_rows_read++;
+    state.srv_n_rows_read++;
   }
 
 func_exit:

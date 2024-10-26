@@ -31,7 +31,7 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 *****************************************************************************/
 
-/** @file srv/srv0srv.c
+/** @file srv/srv0srv.cc
 The database server main program
 
 Created 10/8/1995 Heikki Tuuri
@@ -112,8 +112,7 @@ with mutex_enter(), which will wait until it gets the mutex. */
 #define MUTEX_NOWAIT(mutex_skipped) ((mutex_skipped) < MAX_MUTEX_NOWAIT)
 
 
-/** Variable counts amount of data read in total (in bytes) */
-ulint srv_data_read = 0;
+
 
 /** Here we count the amount of data written in total (in bytes) */
 ulint srv_data_written = 0;
@@ -198,15 +197,7 @@ bool srv_print_log_io = false;
 bool srv_print_latch_waits = false;
 #endif /* UNIV_DEBUG */
 
-ulint srv_n_rows_inserted = 0;
-ulint srv_n_rows_updated = 0;
-ulint srv_n_rows_deleted = 0;
-ulint srv_n_rows_read = 0;
 
-static ulint srv_n_rows_inserted_old = 0;
-static ulint srv_n_rows_updated_old = 0;
-static ulint srv_n_rows_deleted_old = 0;
-static ulint srv_n_rows_read_old = 0;
 
 ulint srv_n_lock_wait_count = 0;
 ulint srv_n_lock_wait_current_count = 0;
@@ -1227,10 +1218,10 @@ static void srv_refresh_innodb_monitor_stats() noexcept {
 
   srv_buf_pool->refresh_io_stats();
 
-  srv_n_rows_inserted_old = srv_n_rows_inserted;
-  srv_n_rows_updated_old = srv_n_rows_updated;
-  srv_n_rows_deleted_old = srv_n_rows_deleted;
-  srv_n_rows_read_old = srv_n_rows_read;
+  state.srv_n_rows_inserted_old = state.srv_n_rows_inserted;
+  state.srv_n_rows_updated_old = state.srv_n_rows_updated;
+  state.srv_n_rows_deleted_old = state.srv_n_rows_deleted;
+  state.srv_n_rows_read_old = state.srv_n_rows_read;
 
   mutex_exit(&srv_innodb_monitor_mutex);
 }
@@ -1378,28 +1369,25 @@ bool InnoDB::printf_innodb_monitor(
 
   log_warn(std::format(
     "Number of rows inserted {}, updated {}, deleted {}, read {}",
-    srv_n_rows_inserted,
-    srv_n_rows_updated,
-    srv_n_rows_deleted,
-    srv_n_rows_read
+    state.srv_n_rows_inserted,
+    state.srv_n_rows_updated,
+    state.srv_n_rows_deleted,
+    state.srv_n_rows_read
   ));
 
   log_warn(std::format(
     "{:.2f} inserts/s, {:.2f} updates/s,"
     " {:.2f} deletes/s, {:.2f} reads/s",
-    (srv_n_rows_inserted - srv_n_rows_inserted_old) / time_elapsed,
-    (srv_n_rows_updated - srv_n_rows_updated_old) / time_elapsed,
-    (srv_n_rows_deleted - srv_n_rows_deleted_old) / time_elapsed,
-    (srv_n_rows_read - srv_n_rows_read_old) / time_elapsed
+    (state.srv_n_rows_inserted - state.srv_n_rows_inserted_old) / time_elapsed,
+    (state.srv_n_rows_updated - state.srv_n_rows_updated_old) / time_elapsed,
+    (state.srv_n_rows_deleted - state.srv_n_rows_deleted_old) / time_elapsed,
+    (state.srv_n_rows_read - state.srv_n_rows_read_old) / time_elapsed
   ));
 
-  srv_n_rows_inserted_old = srv_n_rows_inserted;
-
-  srv_n_rows_updated_old = srv_n_rows_updated;
-
-  srv_n_rows_deleted_old = srv_n_rows_deleted;
-
-  srv_n_rows_read_old = srv_n_rows_read;
+  state.srv_n_rows_inserted_old = state.srv_n_rows_inserted;
+  state.srv_n_rows_updated_old = state.srv_n_rows_updated;
+  state.srv_n_rows_deleted_old = state.srv_n_rows_deleted;
+  state.srv_n_rows_read_old = state.srv_n_rows_read;
 
   log_warn(
     "----------------------------\n"
@@ -1460,15 +1448,15 @@ void InnoDB::export_innodb_status() noexcept {
   export_vars.innodb_row_lock_time = srv_n_lock_wait_time / 1000;
 
   if (srv_n_lock_wait_count > 0) {
-    export_vars.innodb_row_lock_time_avg = (ulint)(srv_n_lock_wait_time / 1000 / srv_n_lock_wait_count);
+    export_vars.innodb_row_lock_time_avg = srv_n_lock_wait_time / 1000 / srv_n_lock_wait_count;
   } else {
     export_vars.innodb_row_lock_time_avg = 0;
   }
   export_vars.innodb_row_lock_time_max = srv_n_lock_max_wait_time / 1000;
-  export_vars.innodb_rows_read = srv_n_rows_read;
-  export_vars.innodb_rows_inserted = srv_n_rows_inserted;
-  export_vars.innodb_rows_updated = srv_n_rows_updated;
-  export_vars.innodb_rows_deleted = srv_n_rows_deleted;
+  export_vars.innodb_rows_read = state.srv_n_rows_read;
+  export_vars.innodb_rows_inserted = state.srv_n_rows_inserted;
+  export_vars.innodb_rows_updated = state.srv_n_rows_updated;
+  export_vars.innodb_rows_deleted = state.srv_n_rows_deleted;
 
   mutex_exit(&srv_innodb_monitor_mutex);
 }

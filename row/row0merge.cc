@@ -25,14 +25,14 @@ Completed by Sunny Bains and Marko Makela
 
 #include "row0merge.h"
 #include "api0misc.h"
-#include "btr0btr.h"
 #include "btr0blob.h"
+#include "btr0btr.h"
 #include "data0data.h"
 #include "data0type.h"
 #include "ddl0ddl.h"
-#include "dict0store.h"
 #include "dict0dict.h"
 #include "dict0load.h"
+#include "dict0store.h"
 #include "lock0lock.h"
 #include "log0log.h"
 #include "mach0data.h"
@@ -47,6 +47,7 @@ Completed by Sunny Bains and Marko Makela
 #include "row0row.h"
 #include "row0sel.h"
 #include "row0upd.h"
+#include "srv0state.h"
 #include "trx0purge.h"
 #include "trx0rec.h"
 #include "trx0roll.h"
@@ -1039,7 +1040,7 @@ static db_err row_merge_read_clustered_index(
         continue;
       }
 
-      ++srv_n_rows_inserted;
+      ++state.srv_n_rows_inserted;
 
       /* Build a row based on the clustered index. */
 

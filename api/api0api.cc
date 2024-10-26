@@ -44,6 +44,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "row0upd.h"
 #include "row0vers.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "trx0roll.h"
 #include "ut0counter.h"
 #include "ut0dbg.h"
@@ -2540,7 +2541,7 @@ static ib_err_t ib_execute_insert_query_graph(Table *table, que_fork_t *ins_grap
 
     ++table->m_stats.m_n_rows;
 
-    srv_n_rows_inserted++;
+    state.srv_n_rows_inserted++;
 
     ib_update_statistics_if_needed(table);
 
@@ -2844,9 +2845,9 @@ static ib_err_t ib_execute_update_query_graph(ib_cursor_t *cursor, Btree_pcursor
         --table->m_stats.m_n_rows;
       }
 
-      ++srv_n_rows_deleted;
+      ++state.srv_n_rows_deleted;
     } else {
-      ++srv_n_rows_updated;
+      ++state.srv_n_rows_updated;
     }
 
     ib_update_statistics_if_needed(table);
