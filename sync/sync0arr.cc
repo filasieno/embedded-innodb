@@ -37,6 +37,7 @@ Created 9/5/1995 Heikki Tuuri
 #include "os0file.h"
 #include "os0sync.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "sync0rw.h"
 #include "sync0sync.h"
 
@@ -732,7 +733,7 @@ bool sync_array_print_long_waits() {
     call hanging inside the operating system, let us print right
     now the values of pending calls of these. */
 
-    ib_logger(ib_stream, "Pending preads %lu, pwrites %lu\n", (ulong)os_file_n_pending_preads, (ulong)os_file_n_pending_pwrites);
+    ib_logger(ib_stream, "Pending preads %lu, pwrites %lu\n", state.os_file_n_pending_preads.load(), state.os_file_n_pending_pwrites.load());
 
     srv_print_innodb_monitor = true;
 

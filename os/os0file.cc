@@ -25,18 +25,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 ***********************************************************************/
 
-/** @file os/os0file.c
+/** @file os/os0file.cc
 The interface to the operating system file i/o primitives
 
 Created 10/21/1995 Heikki Tuuri
 *******************************************************/
 
-#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <array>
 #include <vector>
 
@@ -44,59 +44,32 @@ Created 10/21/1995 Heikki Tuuri
 #include "buf0buf.h"
 #include "fil0fil.h"
 #include "os0file.h"
-#include "srv0srv.h"
-#include "ut0mem.h"
+
+#include "srv0state.h"
+
 #include "os0sync.h"
 #include "os0thread.h"
+#include "srv0srv.h"
+#include "ut0mem.h"
 
 /** Umask for creating files */
 constexpr lint CREATE_MASK = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
 
-/** If the following is true, read i/o handler threads try to
-wait until a batch of new read requests have been posted */
-static bool os_aio_recommend_sleep_for_read_threads = false;
-
-ulint os_n_file_reads = 0;
-ulint os_bytes_read_since_printout = 0;
-ulint os_n_file_writes = 0;
-ulint os_n_fsyncs = 0;
-ulint os_n_file_reads_old = 0;
-ulint os_n_file_writes_old = 0;
-ulint os_n_fsyncs_old = 0;
-time_t os_last_printout;
-
-bool os_has_said_disk_full = false;
-
-/** Number of pending os_file_pread() operations */
-std::atomic<ulint> os_file_n_pending_preads{};
-
-/** Number of pending os_file_pwrite() operations */
-std::atomic<ulint> os_file_n_pending_pwrites{};
-
-/** Number of pending write operations */
-std::atomic<ulint> os_n_pending_writes{};
-
-/** Number of pending read operations */
-std::atomic<ulint> os_n_pending_reads{};
-
-/* Array of English strings describing the current state of an
-i/o handler thread */
-
 void os_file_var_init() {
-  os_aio_recommend_sleep_for_read_threads = false;
-  os_n_file_reads = 0;
-  os_bytes_read_since_printout = 0;
-  os_n_file_writes = 0;
-  os_n_fsyncs = 0;
-  os_n_file_reads_old = 0;
-  os_n_file_writes_old = 0;
-  os_n_fsyncs_old = 0;
-  os_last_printout = 0;
-  os_has_said_disk_full = false;
-  os_file_n_pending_preads = 0;
-  os_file_n_pending_pwrites = 0;
-  os_n_pending_writes = 0;
-  os_n_pending_reads = 0;
+  state.os_aio_recommend_sleep_for_read_threads = false;
+  state.os_n_file_reads = 0;
+  state.os_bytes_read_since_printout = 0;
+  state.os_n_file_writes = 0;
+  state.os_n_fsyncs = 0;
+  state.os_n_file_reads_old = 0;
+  state.os_n_file_writes_old = 0;
+  state.os_n_fsyncs_old = 0;
+  state.os_last_printout = 0;
+  state.os_has_said_disk_full = false;
+  state.os_file_n_pending_preads = 0;
+  state.os_file_n_pending_pwrites = 0;
+  state.os_n_pending_writes = 0;
+  state.os_n_pending_reads = 0;
 }
 
 ulint os_file_get_last_error(bool report_all_errors) {
@@ -153,7 +126,7 @@ static bool os_file_handle_error_cond_exit(const char *name, const char *operati
   if (err == OS_FILE_DISK_FULL) {
     /* We only print a warning about disk full once */
 
-    if (os_has_said_disk_full) {
+    if (state.os_has_said_disk_full) {
 
       return false;
     }
@@ -164,7 +137,7 @@ static bool os_file_handle_error_cond_exit(const char *name, const char *operati
 
     log_err("Disk is full. Try to clean the disk to free space.");
 
-    os_has_said_disk_full = true;
+    state.os_has_said_disk_full = true;
 
     return false;
 
@@ -590,7 +563,8 @@ bool os_file_set_size(const char *name, os_file_t file, off_t desired_size) {
 
   ut_delete(ptr);
 
-  return os_file_flush(file);
+  os_file_flush(file);
+  return true;
 }
 
 /** Sync file contenst to the device.
@@ -604,7 +578,7 @@ static int os_file_fsync(os_file_t file) {
   do {
     ret = fsync(file);
 
-    ++os_n_fsyncs;
+    ++state.os_n_fsyncs;
 
     if (ret == -1 && errno == ENOLCK) {
       if (failures % 100 == 0) {
@@ -626,19 +600,17 @@ static int os_file_fsync(os_file_t file) {
   return ret;
 }
 
-bool os_file_flush(os_file_t file) {
-  int ret = os_file_fsync(file);
+void os_file_flush(os_file_t file) {
 
-  if (ret == 0) {
-    return true;
+  if (const int ret = os_file_fsync(file); ret == 0) {
+    return;
   }
 
   /* Since Linux returns EINVAL if the 'file' is actually a raw device,
   we choose to ignore that error if we are using raw disks */
 
   if (srv_start_raw_disk_in_use && errno == EINVAL) {
-
-    return true;
+    return;
   }
 
   os_file_handle_error(nullptr, "flush");
@@ -646,8 +618,6 @@ bool os_file_flush(os_file_t file) {
   /* It is a fatal error if a file flush does not succeed, because then
   the database can get corrupt on disk */
   log_fatal("The OS said file flush did not succeed");
-
-  return false;
 }
 
 /**
@@ -656,8 +626,7 @@ bool os_file_flush(os_file_t file) {
  * @param[in] file Handle to a file.
  * @param[in] buf Buffer where to read.
  * @param[in] n Number of bytes to read.
- * @param[in] offset Least significant 32 bits of file offset from where to read.
- * @param[in] offset_high Most significant 32 bits of offset.
+ * @param[in] off Least significant 32 bits of file offset from where to read.
  *
  * @return Number of bytes read, -1 if error.
  */
@@ -665,17 +634,17 @@ static ssize_t os_file_pread(os_file_t file, void *buf, ulint n, off_t off) {
   /* If off_t is > 4 bytes in size, then we assume we can pass a
   64-bit address */
 
-  ++os_n_file_reads;
+  ++state.os_n_file_reads;
 
-  os_file_n_pending_preads.fetch_add(1, std::memory_order_relaxed);
+  state.os_file_n_pending_preads.fetch_add(1, std::memory_order_relaxed);
 
-  os_n_pending_reads.fetch_add(1, std::memory_order_relaxed);
+  state.os_n_pending_reads.fetch_add(1, std::memory_order_relaxed);
 
-  auto n_bytes = pread(file, buf, (ssize_t)n, off);
+  const auto n_bytes = pread(file, buf, static_cast<ssize_t>(n), off);
 
-  os_file_n_pending_preads.fetch_sub(1, std::memory_order_relaxed);
+  state.os_file_n_pending_preads.fetch_sub(1, std::memory_order_relaxed);
 
-  os_n_pending_reads.fetch_sub(1, std::memory_order_relaxed);
+  state.os_n_pending_reads.fetch_sub(1, std::memory_order_relaxed);
 
   return n_bytes;
 }
@@ -686,23 +655,22 @@ static ssize_t os_file_pread(os_file_t file, void *buf, ulint n, off_t off) {
  * @param[in] file Handle to a file.
  * @param[in] buf Buffer from where to write.
  * @param[in] n Number of bytes to write.
- * @param[in] offset Least significant 32 bits of file offset where to write.
- * @param[in] offset_high Most significant 32 bits of offset.
+ * @param[in] off Least significant 32 bits of file offset where to write.
  *
  * @return Number of bytes written, -1 if error.
  */
 static ssize_t os_file_pwrite(os_file_t file, const void *buf, ulint n, off_t off) {
-  ++os_n_file_writes;
+  ++state.os_n_file_writes;
 
-  os_file_n_pending_pwrites.fetch_add(1, std::memory_order_relaxed);
+  state.os_file_n_pending_pwrites.fetch_add(1, std::memory_order_relaxed);
 
-  os_n_pending_writes.fetch_add(1, std::memory_order_relaxed);
+  state.os_n_pending_writes.fetch_add(1, std::memory_order_relaxed);
 
-  auto n_bytes = pwrite(file, buf, (ssize_t)n, off);
+  const auto n_bytes = pwrite(file, buf, static_cast<ssize_t>(n), off);
 
-  os_file_n_pending_pwrites.fetch_sub(1, std::memory_order_relaxed);
+  state.os_file_n_pending_pwrites.fetch_sub(1, std::memory_order_relaxed);
 
-  os_n_pending_writes.fetch_sub(1, std::memory_order_relaxed);
+  state.os_n_pending_writes.fetch_sub(1, std::memory_order_relaxed);
 
   return n_bytes;
 }
@@ -710,10 +678,10 @@ static ssize_t os_file_pwrite(os_file_t file, const void *buf, ulint n, off_t of
 bool os_file_read(os_file_t file, void *p, ulint n, off_t off) {
   auto ptr = static_cast<char*>(p);
 
-  os_bytes_read_since_printout += n;
+  state.os_bytes_read_since_printout += n;
 
   do {
-    auto n_bytes = os_file_pread(file, ptr, n, off);
+    const auto n_bytes = os_file_pread(file, ptr, n, off);
 
     if (n_bytes == -1) {
       switch (errno) {
@@ -740,10 +708,10 @@ bool os_file_read(os_file_t file, void *p, ulint n, off_t off) {
 bool os_file_read_no_error_handling(os_file_t file, void *p, ulint n, off_t off) {
   auto ptr = static_cast<char*>(p);
 
-  os_bytes_read_since_printout += n;
+  state.os_bytes_read_since_printout += n;
 
   do {
-    auto n_bytes = os_file_pread(file, ptr, n, off);
+    const auto n_bytes = os_file_pread(file, ptr, n, off);
 
     if (n_bytes == -1) {
       switch (errno) {
@@ -767,14 +735,11 @@ bool os_file_read_no_error_handling(os_file_t file, void *p, ulint n, off_t off)
 }
 
 void os_file_read_string(FILE *file, char *str, ulint size) {
-  size_t flen;
-
   if (size == 0) {
     return;
   }
-
   rewind(file);
-  flen = fread(str, 1, size - 1, file);
+  const size_t flen = fread(str, 1, size - 1, file);
   str[flen] = '\0';
 }
 
@@ -791,7 +756,7 @@ bool os_file_write(const char *name, os_file_t file, const void *p, ulint n, off
           continue;
         default:
           if (os_file_handle_error(name, "write")) {
-            if (!os_has_said_disk_full) {
+            if (!state.os_has_said_disk_full) {
               log_err(
                 std::format("Write to file {} failed at offset {}. {} bytes should have been written,"
                             " only {} were written. Operating system error number {} - '{}'."
@@ -799,7 +764,7 @@ bool os_file_write(const char *name, os_file_t file, const void *p, ulint n, off
                             name, off, n, n_bytes, errno, strerror(errno)));
             }
 
-            os_has_said_disk_full = true;
+            state.os_has_said_disk_full = true;
             continue;
 
           } else {
@@ -818,19 +783,15 @@ bool os_file_write(const char *name, os_file_t file, const void *p, ulint n, off
 }
 
 bool os_file_status(const char *path, bool *exists, os_file_type_t *type) {
-  struct stat statinfo;
+  struct stat statinfo; // NOLINT(*-pro-type-member-init)
 
-  int ret = stat(path, &statinfo);
-
-  if (ret != 0 && (errno == ENOENT || errno == ENOTDIR)) {
-    /* File does not exist */
+  if (const int ret = stat(path, &statinfo); ret != 0 && (errno == ENOENT || errno == ENOTDIR)) {
+    // File does not exist
     *exists = false;
     return true;
   } else if (ret != 0) {
-    /* File exists, but stat call failed */
-
+    // File exists, but stat call failed
     os_file_handle_error_no_exit(path, "stat");
-
     return false;
   }
 
@@ -845,24 +806,18 @@ bool os_file_status(const char *path, bool *exists, os_file_type_t *type) {
   }
 
   *exists = true;
-
   return true;
 }
 
 bool os_file_get_status(const char *path, os_file_stat_t *stat_info) {
-  struct stat statinfo;
+  struct stat statinfo; // NOLINT(*-pro-type-member-init)
 
-  int ret = stat(path, &statinfo);
-
-  if (ret != 0 && (errno == ENOENT || errno == ENOTDIR)) {
-    /* File does not exist */
-
+  if (const int ret = stat(path, &statinfo); ret != 0 && (errno == ENOENT || errno == ENOTDIR)) {
+    // case file does not exist
     return false;
   } else if (ret != 0) {
-    /* File exists, but stat call failed */
-
+    //case file exists, but stat call failed
     os_file_handle_error_no_exit(path, "stat");
-
     return false;
   }
 
@@ -907,23 +862,22 @@ char *os_file_dirname(const char *path) {
   return mem_strdupl(path, last_slash - path);
 }
 
-bool os_file_create_subdirs_if_needed(const char *path) {
+bool os_file_create_subdirs_if_needed(const char *path) { // NOLINT(*-no-recursion)
   bool subdir_exists;
-  auto subdir = os_file_dirname(path);
+  const auto subdir = os_file_dirname(path);
 
   if (strlen(subdir) == 1 && (*subdir == SRV_PATH_SEPARATOR || *subdir == '.')) {
-    /* subdir is root or cwd, nothing to do */
+    // subdir is root or cwd, nothing to do
     mem_free(subdir);
-
     return true;
   }
 
-  /* Test if subdir exists */
+  // Test if subdir exists
   os_file_type_t type;
   auto success = os_file_status(subdir, &subdir_exists, &type);
 
   if (success && !subdir_exists) {
-    /* Subdir does not exist, create it */
+    // Subdir does not exist, create it
     success = os_file_create_subdirs_if_needed(subdir);
 
     if (!success) {
@@ -939,60 +893,60 @@ bool os_file_create_subdirs_if_needed(const char *path) {
   return success;
 }
 
-void os_file_print(ib_stream_t ib_stream) {
-  ib_logger(ib_stream, "\n");
+void os_file_print(ib_stream_t ib_strm) {
+  ib_logger(ib_strm, "\n");
   auto current_time = time(nullptr);
-  auto time_elapsed = 0.001 + difftime(current_time, os_last_printout);
+  auto time_elapsed = 0.001 + difftime(current_time, state.os_last_printout);
 
   ib_logger(
-    ib_stream,
+    ib_strm,
     "Pending flushes (fsync) log: %lu; buffer pool: %lu\n"
     "%lu OS file reads, %lu OS file writes, %lu OS fsyncs\n",
-    (ulong)srv_fil->get_pending_log_flushes(),
-    (ulong)srv_fil->get_pending_tablespace_flushes(),
-    (ulong)os_n_file_reads,
-    (ulong)os_n_file_writes,
-    (ulong)os_n_fsyncs
+    srv_fil->get_pending_log_flushes(),
+    srv_fil->get_pending_tablespace_flushes(),
+    state.os_n_file_reads,
+    state.os_n_file_writes,
+    state.os_n_fsyncs
   );
 
-  if (os_file_n_pending_preads != 0 || os_file_n_pending_pwrites != 0) {
+  if (state.os_file_n_pending_preads != 0 || state.os_file_n_pending_pwrites != 0) {
     ib_logger(
-      ib_stream, "%lu pending preads, %lu pending pwrites\n",
-      (ulong)os_file_n_pending_preads.load(),
-      (ulong)os_file_n_pending_pwrites
+      ib_strm, "%lu pending preads, %lu pending pwrites\n",
+      state.os_file_n_pending_preads.load(),
+      state.os_file_n_pending_pwrites.load()
     );
   }
 
   double avg_bytes_read;
 
-  if (os_n_file_reads == os_n_file_reads_old) {
+  if (state.os_n_file_reads == state.os_n_file_reads_old) {
     avg_bytes_read = 0.0;
   } else {
-    avg_bytes_read = (double)os_bytes_read_since_printout / (os_n_file_reads - os_n_file_reads_old);
+    avg_bytes_read = static_cast<double>(state.os_bytes_read_since_printout) / static_cast<double>(state.os_n_file_reads - state.os_n_file_reads_old);
   }
 
   ib_logger(
     ib_stream,
     "%.2f reads/s, %lu avg bytes/read, %.2f writes/s, %.2f fsyncs/s\n",
-    (os_n_file_reads - os_n_file_reads_old) / time_elapsed,
-    (ulong)avg_bytes_read,
-    (os_n_file_writes - os_n_file_writes_old) / time_elapsed,
-    (os_n_fsyncs - os_n_fsyncs_old) / time_elapsed
+    (state.os_n_file_reads - state.os_n_file_reads_old) / time_elapsed,
+    static_cast<ulint>(avg_bytes_read),
+    (state.os_n_file_writes - state.os_n_file_writes_old) / time_elapsed,
+    (state.os_n_fsyncs - state.os_n_fsyncs_old) / time_elapsed
   );
 
-  os_n_file_reads_old = os_n_file_reads;
-  os_n_file_writes_old = os_n_file_writes;
-  os_n_fsyncs_old = os_n_fsyncs;
-  os_bytes_read_since_printout = 0;
+  state.os_n_file_reads_old = state.os_n_file_reads;
+  state.os_n_file_writes_old = state.os_n_file_writes;
+  state.os_n_fsyncs_old = state.os_n_fsyncs;
+  state.os_bytes_read_since_printout = 0;
 
-  os_last_printout = current_time;
+  state.os_last_printout = current_time;
 }
 
 void os_file_refresh_stats() {
-  os_n_file_reads_old = os_n_file_reads;
-  os_n_file_writes_old = os_n_file_writes;
-  os_n_fsyncs_old = os_n_fsyncs;
-  os_bytes_read_since_printout = 0;
+  state.os_n_file_reads_old = state.os_n_file_reads;
+  state.os_n_file_writes_old = state.os_n_file_writes;
+  state.os_n_fsyncs_old = state.os_n_fsyncs;
+  state.os_bytes_read_since_printout = 0;
 
-  os_last_printout = time(nullptr);
+  state.os_last_printout = time(nullptr);
 }
