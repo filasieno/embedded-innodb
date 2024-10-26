@@ -33,6 +33,7 @@ Created 11/5/1995 Heikki Tuuri
 #include "log0recv.h"
 #include "os0file.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "trx0sys.h"
 #include "ut0logger.h"
 
@@ -372,7 +373,7 @@ void buf_read_recv_pages(bool sync, space_id_t space, const page_no_t *page_nos,
           std::format(
             "Waited for 10 seconds for pending reads to the buffer pool to"
             " be finished. Number of pending reads {}. pending pread calls {}",
-            srv_buf_pool->m_n_pend_reads, os_file_n_pending_preads.load())
+            srv_buf_pool->m_n_pend_reads, state.os_file_n_pending_preads.load())
 	);
       }
     }

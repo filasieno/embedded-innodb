@@ -33,7 +33,9 @@ this program; if not, write to the Free Software Foundation, Inc.,
 #pragma once
 
 #include "os0thread.h"
+#include "srv0state.h"
 
+#include <thread>
 #include <atomic>
 #include <future>
 #include <functional>
@@ -103,6 +105,7 @@ std::thread create_joinable_thread(F &&f, Args &&... args) {
 }
 
 /** Parallel for loop over a container.
+@param[in]	c        A Container
 @param[in]	n        Number of threads to create
 @param[in]	f        Callable instance
 @param[in]	args     Zero or more args */

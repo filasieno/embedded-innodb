@@ -37,6 +37,7 @@ Created 11/5/1995 Heikki Tuuri
 #include "os0file.h"
 #include "os0sync.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "sync0sync.h"
 #include "ut0lst.h"
 
@@ -353,12 +354,12 @@ loop:
       " %lu OS fsyncs\n"
       "Starting InnoDB Monitor to print further\n"
       "diagnostics to the standard output.\n",
-      (ulong)n_iterations,
-      (ulong)srv_fil->get_pending_log_flushes(),
-      (ulong)srv_fil->get_pending_tablespace_flushes(),
-      (ulong)os_n_file_reads,
-      (ulong)os_n_file_writes,
-      (ulong)os_n_fsyncs
+      n_iterations,
+      srv_fil->get_pending_log_flushes(),
+      srv_fil->get_pending_tablespace_flushes(),
+      state.os_n_file_reads,
+      state.os_n_file_writes,
+      state.os_n_fsyncs
     );
 
     mon_value_was = srv_print_innodb_monitor;

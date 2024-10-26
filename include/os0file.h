@@ -34,26 +34,10 @@ Created 10/21/1995 Heikki Tuuri
 #pragma once
 
 #include "innodb0types.h"
-
 #include <filesystem>
-#include <atomic>
 
 /** File node of a tablespace or the log data space */
 struct fil_node_t;
-
-extern bool os_has_said_disk_full;
-
-/** Number of pending os_file_pread() operations */
-extern std::atomic<ulint> os_file_n_pending_preads;
-
-/** Number of pending os_file_pwrite() operations */
-extern std::atomic<ulint> os_file_n_pending_pwrites;
-
-/** Number of pending read operations */
-extern std::atomic<ulint> os_n_pending_reads;
-
-/** Number of pending write operations */
-extern std::atomic<ulint> os_n_pending_writes;
 
 /** Convert a C file descriptor to a native file handle
 @param fd	file descriptor
@@ -106,12 +90,7 @@ constexpr ulint OS_FILE_OPERATION_ABORTED = 79;
 
 /* @} */
 
-extern ulint os_n_file_reads;
-extern ulint os_n_file_writes;
-extern ulint os_n_fsyncs;
-
 /* File types for directory entry data type */
-
 enum os_file_type_t {
   OS_FILE_TYPE_UNKNOWN = 0,
 
@@ -276,7 +255,6 @@ bool os_file_close(os_file_t file);
  *
  * @param file Handle to a file.
  * @param size Least significant 32 bits of file size.
- * @param size_high Most significant 32 bits of size.
  * @return True if success.
  */
 bool os_file_get_size(os_file_t file, off_t *size);
@@ -309,11 +287,12 @@ bool os_file_set_eof(FILE *file);
 
 /**
  * @brief Flushes the write buffers of a given file to the disk.
+ * A flush failure is a fatal error.
  *
  * @param file Handle to a file.
  * @return True if success.
  */
-bool os_file_flush(os_file_t file);
+void os_file_flush(os_file_t file);
 
 /**
  * @brief Retrieves the last error number if an error occurs in a file io function.
@@ -430,9 +409,10 @@ void os_file_free();
 /**
  * @brief Prints info about the IO subsystem.
  *
- * @param ib_stream Stream where to print.
+ * @param ib_strm Stream where to print.
+ * Note: ib_stream is a macro
  */
-void os_file_print(ib_stream_t ib_stream);
+void os_file_print(ib_stream_t ib_strm);
 
 /**
  * @brief Returns information about the specified file.
@@ -474,7 +454,6 @@ void os_file_refresh_stats();
   }
 
   ut_error;
-  return "Unknown file status";
 }
 
 /**
@@ -488,8 +467,9 @@ void os_file_refresh_stats();
     using std::filesystem::perms;
     std::ostringstream os{};
 
-    auto print = [=](std::ostream& os, char op, perms perm) {
-        os << (perms::none == (perm & p) ? '-' : op);
+    // Note: Declaration of 'os' hides previous local declaration
+    auto print = [=](std::ostream& ostrm, char op, perms perm) {
+        ostrm << (perms::none == (perm & p) ? '-' : op);
     };
 
     print(os, 'r', perms::owner_read);
