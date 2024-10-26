@@ -224,14 +224,14 @@ SET(INNODB_SOURCES
       row/row0purge.cc row/row0row.cc row/row0prebuilt.cc
       row/row0sel.cc row/row0uins.cc row/row0umod.cc
       row/row0undo.cc row/row0upd.cc row/row0vers.cc
-      srv/srv0srv.cc srv/srv0start.cc
+      srv/srv0srv.cc srv/srv0start.cc srv/srv0state.cc
       sync/sync0arr.cc sync/sync0rw.cc sync/sync0sync.cc
       trx/trx0purge.cc trx/trx0rec.cc
       trx/trx0roll.cc trx/trx0rseg.cc
       trx/trx0sys.cc trx/trx0trx.cc trx/trx0undo.cc
       usr/usr0sess.cc ut/ut0dbg.cc ut/ut0mem.cc
       ut/ut0rnd.cc ut/ut0ut.cc
-        ddl/ddl0ddl.cc
+      ddl/ddl0ddl.cc
       api/api0api.cc api/api0misc.cc api/api0ucode.cc
       api/api0cfg.cc api/api0status.cc api/api0sql.cc)
 
