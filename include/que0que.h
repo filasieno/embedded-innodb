@@ -29,16 +29,9 @@ Created 5/27/1996 Heikki Tuuri
 #include "innodb0types.h"
 #include "pars0types.h"
 #include "que0types.h"
-#include "row0types.h"
 #include "srv0srv.h"
 #include "trx0roll.h"
 #include "trx0trx.h"
-#include "usr0sess.h"
-#include "usr0types.h"
-
-/* If the following flag is set true, the module will print trace info
-of SQL execution in the UNIV_SQL_DEBUG version */
-extern bool que_trace_on;
 
 /** Adds a query graph to the session's list of graphs. */
 
@@ -46,9 +39,9 @@ void que_graph_publish(
   que_t *graph, /*!< in: graph */
   Session *sess
 ); /*!< in: session */
+
 /** Creates a query graph fork node.
 @return	own: fork node */
-
 que_fork_t *que_fork_create(
   que_t *graph,       /*!< in: graph, if NULL then this
                                     fork node is assumed to be the

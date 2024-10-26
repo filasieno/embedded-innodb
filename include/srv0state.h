@@ -40,6 +40,10 @@ struct Log;
 /// The type holds defines the state of a single instace of the InnoDB.
 /// All fields will be prefixed to highlight the module the defines it.
 struct InnoDB_state {
+  /// If the following flag is set true, the module will print trace info
+  /// of SQL execution in the UNIV_SQL_DEBUG version
+  bool que_trace_on;
+
   // ------------------------------------------------------------------------
   // DB Components
   // ------------------------------------------------------------------------
