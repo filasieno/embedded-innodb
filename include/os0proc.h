@@ -34,11 +34,6 @@ typedef void *os_process_t;
 
 typedef unsigned long int os_process_id_t;
 
-extern bool os_use_large_pages;
-
-/* Large page size. This may be a boot-time option on some platforms */
-extern ulint os_large_page_size;
-
 /** Converts the current process id to a number. It is not guaranteed that the
 number is unique. In Linux returns the 'process number' of the current
 thread. That number is the same as one sees in 'top', for example. In Linux

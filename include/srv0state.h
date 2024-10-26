@@ -38,10 +38,26 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 /// The type holds defines the state of a single instace of the InnoDB.
 /// All fields will be prefixed to highlight the module the defines it.
 struct InnoDB_state {
+
+  // ------------------------------------------------------------------------
+  // Sys and Srv files
+  // ------------------------------------------------------------------------
   Fil *sys_fil;
   Fil *srv_fil;
 
+  // ------------------------------------------------------------------------
+  // OS Proc
+  // ------------------------------------------------------------------------
+
+  /// Use large pages. This may be a boot-time option on some platforms.
+  bool os_use_large_pages;
+
+  /// Large page size. This may be a boot-time option on some platforms
+  ulint os_large_page_size;
+
+  // ------------------------------------------------------------------------
   // OS file State
+  // ------------------------------------------------------------------------
   ulint os_n_file_reads;
   ulint os_n_file_writes;
   ulint os_n_fsyncs;
