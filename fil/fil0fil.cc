@@ -40,6 +40,7 @@ Created 10/25/1995 Heikki Tuuri
 #include "os0sync.h"
 #include "page0page.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "sync0sync.h"
 #include "ut0logger.h"
 
@@ -2106,7 +2107,7 @@ bool Fil::extend_space_to_desired_size(page_no_t *actual_size, space_id_t space_
       node->m_size_in_pages += n_pages;
       space->m_size_in_pages += n_pages;
 
-      os_has_said_disk_full = false;
+      state.os_has_said_disk_full = false;
     } else {
       /* Let us measure the size of the file to determine how much we were able
        * to extend it */

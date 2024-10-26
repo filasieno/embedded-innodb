@@ -31,11 +31,31 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 #ifndef SRV0STATE_H
 #define SRV0STATE_H
 
+#include <innodb0types.h>
 
-// Define a single InnoDB global state type.
-// The type holds defines the state of a single instace of the InnoDB.
-// All fields will be prefixed to highlight the module the defines it.
+/// Define a single InnoDB global state type.
+/// The type holds defines the state of a single instace of the InnoDB.
+/// All fields will be prefixed to highlight the module the defines it.
 struct InnoDB_state {
+
+  // OS file State
+  ulint os_n_file_reads;
+  ulint os_n_file_writes;
+  ulint os_n_fsyncs;
+
+  bool os_has_said_disk_full;
+
+  /// Number of pending os_file_pread() operations
+  std::atomic<ulint> os_file_n_pending_preads;
+
+  /// Number of pending os_file_pwrite() operations
+  std::atomic<ulint> os_file_n_pending_pwrites;
+
+  /// Number of pending read operations
+  std::atomic<ulint> os_n_pending_reads;
+
+  /// Number of pending write operations
+  std::atomic<ulint> os_n_pending_writes;
 
 };
 

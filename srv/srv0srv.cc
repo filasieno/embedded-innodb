@@ -47,8 +47,8 @@ Created 10/8/1995 Heikki Tuuri
 #include "buf0flu.h"
 #include "buf0lru.h"
 #include "ddl0ddl.h"
-#include "dict0store.h"
 #include "dict0load.h"
+#include "dict0store.h"
 #include "lock0lock.h"
 #include "log0recv.h"
 #include "mem0mem.h"
@@ -57,6 +57,8 @@ Created 10/8/1995 Heikki Tuuri
 #include "pars0pars.h"
 #include "que0que.h"
 #include "srv0srv.h"
+
+#include "srv0state.h"
 #include "sync0sync.h"
 #include "trx0purge.h"
 #include "usr0sess.h"
@@ -1413,13 +1415,13 @@ bool InnoDB::printf_innodb_monitor(
 void InnoDB::export_innodb_status() noexcept {
   mutex_enter(&srv_innodb_monitor_mutex);
 
-  export_vars.innodb_data_pending_reads = os_n_pending_reads;
-  export_vars.innodb_data_pending_writes = os_n_pending_writes;
+  export_vars.innodb_data_pending_reads = state.os_n_pending_reads;
+  export_vars.innodb_data_pending_writes = state.os_n_pending_writes;
   export_vars.innodb_data_pending_fsyncs = srv_fil->get_pending_log_flushes() + srv_fil->get_pending_tablespace_flushes();
-  export_vars.innodb_data_fsyncs = os_n_fsyncs;
+  export_vars.innodb_data_fsyncs = state.os_n_fsyncs;
   export_vars.innodb_data_read = srv_data_read;
-  export_vars.innodb_data_reads = os_n_file_reads;
-  export_vars.innodb_data_writes = os_n_file_writes;
+  export_vars.innodb_data_reads = state.os_n_file_reads;
+  export_vars.innodb_data_writes = state.os_n_file_writes;
   export_vars.innodb_data_written = srv_data_written;
   export_vars.innodb_buffer_pool_read_requests = srv_buf_pool->m_stat.n_page_gets;
   export_vars.innodb_buffer_pool_write_requests = srv_buf_pool->m_write_requests;
