@@ -389,9 +389,6 @@ extern uint64_t srv_start_lsn;
 /** true if the server is being started */
 extern bool srv_is_being_started;
 
-/** true if the server was successfully started */
-extern bool srv_was_started;
-
 /** true if the server is being started, before rolling back any
 incomplete transactions */
 extern bool srv_startup_is_before_trx_rollback_phase;

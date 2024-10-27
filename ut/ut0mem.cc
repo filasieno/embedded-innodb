@@ -25,6 +25,7 @@ Created 5/11/1994 Heikki Tuuri
 #include "ut0mem.h"
 
 #include <errno.h>
+#include <srv0state.h>
 
 #include "os0thread.h"
 #include "srv0srv.h"
@@ -80,7 +81,7 @@ void ut_mem_var_init() {
 }
 
 void ut_mem_init() {
-  ut_a(!srv_was_started);
+  ut_a(!state.srv_was_started);
 
   if (!ut_mem_block_list_inited) {
     UT_LIST_INIT(Mem_block::s_blocks);
