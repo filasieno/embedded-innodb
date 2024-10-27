@@ -79,7 +79,7 @@ ulint os_file_get_last_error(bool report_all_errors) {
     if (errno == ENOENT) {
       log_err("The error means the system cannot find the path specified.");
 
-      if (srv_is_being_started) {
+      if (state.srv_is_being_started) {
         log_err(
           "If you are installing InnoDB, remember that you must create"
           " directories yourself, InnoDB does not create them.");
