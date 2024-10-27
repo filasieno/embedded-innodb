@@ -407,7 +407,7 @@ os_file_t os_file_create(const char *name, ulint create_mode, ulint purpose, uli
     /* We let O_SYNC only affect log files; note that we map O_DSYNC to
     O_SYNC because the datasync options seemed to corrupt files in 2001
     in both Linux and Solaris */
-    if (type == OS_LOG_FILE && srv_config.m_unix_file_flush_method == SRV_UNIX_O_DSYNC) {
+    if (type == OS_LOG_FILE && state.srv_config.m_unix_file_flush_method == SRV_UNIX_O_DSYNC) {
       create_flag = create_flag | O_SYNC;
     }
 #endif /* O_SYNC */
@@ -420,7 +420,7 @@ os_file_t os_file_create(const char *name, ulint create_mode, ulint purpose, uli
       /* When srv_file_per_table is on, file creation failure may not
       be critical to the whole instance. Do not crash the server in
       case of unknown errors. */
-      if (srv_config.m_file_per_table) {
+      if (state.srv_config.m_file_per_table) {
         retry = os_file_handle_error_no_exit(name, create_mode == OS_FILE_CREATE ? "create" : "open");
       } else {
         retry = os_file_handle_error(name, create_mode == OS_FILE_CREATE ? "create" : "open");
@@ -436,7 +436,7 @@ os_file_t os_file_create(const char *name, ulint create_mode, ulint purpose, uli
     *success = true;
 
     /* We disable OS caching (O_DIRECT) only on data files */
-    if (type != OS_LOG_FILE && srv_config.m_unix_file_flush_method == SRV_UNIX_O_DIRECT) {
+    if (type != OS_LOG_FILE && state.srv_config.m_unix_file_flush_method == SRV_UNIX_O_DIRECT) {
       os_file_set_nocache(file, name, mode_str);
     }
 

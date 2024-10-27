@@ -325,7 +325,7 @@ db_err Dict_store::build_table_def_step(que_thr_t *thr, Table_node *node) noexce
 
   thr_get_trx(thr)->m_table_id = table->m_id;
 
-  if (srv_config.m_file_per_table) {
+  if (state.srv_config.m_file_per_table) {
     /* We create a new single-table tablespace for the table.
     We initially let it be 4 pages:
     - page 0 is the fsp header and an extent descriptor page,

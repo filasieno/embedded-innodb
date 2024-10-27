@@ -215,7 +215,7 @@ static void row_undo_ins_parse_undo_rec(ib_recovery_t recovery, Undo_node *node)
   node->rec_type = type;
 
   node->update = nullptr;
-  node->table = srv_dict_sys->table_get_on_id(srv_config.m_force_recovery, table_id, node->trx);
+  node->table = srv_dict_sys->table_get_on_id(state.srv_config.m_force_recovery, table_id, node->trx);
 
   /* Skip the UNDO if we can't find the table or the .ibd file. */
   if (unlikely(node->table == nullptr)) {
@@ -244,7 +244,7 @@ static void row_undo_ins_parse_undo_rec(ib_recovery_t recovery, Undo_node *node)
 db_err row_undo_ins(Undo_node *node) {
   ut_ad(node->state == UNDO_NODE_INSERT);
 
-  row_undo_ins_parse_undo_rec(srv_config.m_force_recovery, node);
+  row_undo_ins_parse_undo_rec(state.srv_config.m_force_recovery, node);
 
   if (!node->table || !row_undo_search_clust_to_pcur(node)) {
     trx_undo_rec_release(node->trx, node->undo_no);

@@ -215,7 +215,7 @@ ulint buf_read_ahead_linear(Buf_pool *buf_pool, space_id_t space, page_no_t offs
 
   /* How many out of order accessed pages can we ignore
   when working out the access pattern for linear readahead */
-  threshold = ut_min((64 - srv_config.m_read_ahead_threshold), srv_buf_pool->get_read_ahead_area());
+  threshold = ut_min((64 - state.srv_config.m_read_ahead_threshold), srv_buf_pool->get_read_ahead_area());
 
   fail_count = 0;
 

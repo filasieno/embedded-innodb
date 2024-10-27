@@ -31,6 +31,8 @@ Created 9/5/1995 Heikki Tuuri
 
 #include "sync0sync.h"
 
+#include <srv0state.h>
+
 #include "buf0buf.h"
 #include "buf0types.h"
 #include "os0sync.h"
@@ -1043,7 +1045,7 @@ void sync_init() {
   /* Create the primary system wait array which is protected by an OS
   mutex */
 
-  sync_primary_wait_array = sync_array_create(OS_THREAD_MAX_N, SYNC_ARRAY_OS_MUTEX);
+  sync_primary_wait_array = sync_array_create(state.max_n_threads(), SYNC_ARRAY_OS_MUTEX);
 
   IF_SYNC_DEBUG(
     /* Create the thread latch level array where the latch levels

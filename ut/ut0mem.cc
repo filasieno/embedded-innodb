@@ -90,7 +90,7 @@ void ut_mem_init() {
 }
 
 static void *allocate(ulint n, bool set_to_zero, bool assert_on_error) {
-  if (srv_config.m_use_sys_malloc) {
+  if (state.srv_config.m_use_sys_malloc) {
     auto ptr = new char [n];
     ut_a(ptr != nullptr || !assert_on_error);
     return ptr;
@@ -173,7 +173,7 @@ void ut_delete_func(void *p, Source_location location) {
 
   if (ptr == nullptr) {
     return;
-  } else if (srv_config.m_use_sys_malloc) {
+  } else if (state.srv_config.m_use_sys_malloc) {
     delete [] ptr;
     return;
   }
@@ -202,7 +202,7 @@ void *ut_realloc_func(void *p, ulint n, Source_location location) {
   if (n == 0) {
     ut_delete(p);
     return nullptr;
-  } else if (srv_config.m_use_sys_malloc) {
+  } else if (state.srv_config.m_use_sys_malloc) {
     delete [] ptr;
     return ut_new_func(n, location);
   }

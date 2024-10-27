@@ -927,7 +927,7 @@ void Fil::read_flushed_lsn(os_file_t fh, lsn_t &flushed_lsn) {
 }
 
 void Fil::create_directory_for_tablename(const char *name) {
-  auto len = strlen(srv_config.m_data_home);
+  auto len = strlen(state.srv_config.m_data_home);
   ut_a(len > 0);
 
   auto namend = strchr(name, '/');
@@ -935,7 +935,7 @@ void Fil::create_directory_for_tablename(const char *name) {
 
   auto path = (char *)mem_alloc(len + (namend - name) + 2);
 
-  strncpy(path, srv_config.m_data_home, len);
+  strncpy(path, state.srv_config.m_data_home, len);
   ut_a(path[len - 1] == SRV_PATH_SEPARATOR);
 
   strncpy(path + len, name, namend - name);
@@ -1261,11 +1261,11 @@ bool Fil::rename_tablespace_in_mem(fil_space_t *space, fil_node_t *node, const c
 
 char *Fil::make_ibd_name(const char *name, bool is_temp) {
   ulint namelen = strlen(name);
-  auto dirlen = strlen(srv_config.m_data_home);
+  auto dirlen = strlen(state.srv_config.m_data_home);
   auto sz = dirlen + namelen + sizeof("/.ibd");
   auto filename = static_cast<char *>(mem_alloc(sz));
 
-  std::snprintf(filename, sz, "%s%s.ibd", normalize_path(srv_config.m_data_home), name);
+  std::snprintf(filename, sz, "%s%s.ibd", normalize_path(state.srv_config.m_data_home), name);
 
   return filename;
 }
@@ -1632,7 +1632,7 @@ bool Fil::open_single_table_tablespace(bool check_space_id, space_id_t id, ulint
 void Fil::load_single_table_tablespace(ib_recovery_t recovery, const char *dbname, const char *filename) {
   char dir[OS_FILE_MAX_PATH];
 
-  strcpy(dir, srv_config.m_data_home);
+  strcpy(dir, state.srv_config.m_data_home);
 
   auto ptr = normalize_path(dir);
   auto len = strlen(dbname) + strlen(filename) + strlen(dir) + 3;
@@ -1784,12 +1784,12 @@ void Fil::load_single_table_tablespace(ib_recovery_t recovery, const char *dbnam
 
   if (!success) {
 
-    if (srv_config.m_force_recovery > 0) {
+    if (state.srv_config.m_force_recovery > 0) {
 
       log_warn(std::format(
         "innodb_force_recovery was set to {}. Continuing crash recovery"
         " even though the tablespace creation of this table failed.",
-        to_int(srv_config.m_force_recovery)
+        to_int(state.srv_config.m_force_recovery)
       ));
 
       goto func_exit;
@@ -2586,7 +2586,7 @@ bool Fil::rmdir(const char *dbname) {
   bool success{};
   char dir[OS_FILE_MAX_PATH];
 
-  std::snprintf(dir, sizeof(dir), "%s%s", srv_config.m_data_home, dbname);
+  std::snprintf(dir, sizeof(dir), "%s%s", state.srv_config.m_data_home, dbname);
 
   if (::rmdir(dbname) != 0) {
     log_err("Removing directory: ", dbname);
@@ -2599,7 +2599,7 @@ bool Fil::rmdir(const char *dbname) {
 bool Fil::mkdir(const char *dbname) {
   char dir[OS_FILE_MAX_PATH];
 
-  std::snprintf(dir, sizeof(dir), "%s%s", srv_config.m_data_home, dbname);
+  std::snprintf(dir, sizeof(dir), "%s%s", state.srv_config.m_data_home, dbname);
 
   /* If exists (false) then don't return error. */
   return os_file_create_directory(dir, false);

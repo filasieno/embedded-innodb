@@ -33,8 +33,6 @@ Created 9/8/1995 Heikki Tuuri
 this is also the size of the wait slot array for user threads which
 can wait inside InnoDB */
 
-#define OS_THREAD_MAX_N srv_config.m_max_n_threads
-
 /* Possible fixed priorities for threads */
 constexpr ulint OS_THREAD_PRIORITY_NONE = 100;
 constexpr ulint OS_THREAD_PRIORITY_BACKGROUND = 1;

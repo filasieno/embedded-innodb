@@ -39,6 +39,7 @@ Created 1/8/1996 Heikki Tuuri
 #include "ut0mem.h"
 #include "ut0rnd.h"
 
+#include <srv0state.h>
 #include <string_view>
 #include <unordered_map>
 
@@ -552,7 +553,7 @@ struct Dict {
     auto table = table_check_if_in_cache(table_name);
 
     if (table == nullptr) {
-      table = m_loader.load_table(srv_config.m_force_recovery, table_name);
+      table = m_loader.load_table(state.srv_config.m_force_recovery, table_name);
     }
 
     ut_ad(table == nullptr || table->m_cached);

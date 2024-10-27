@@ -301,6 +301,56 @@ constexpr std::size_t hardware_destructive_interference_size = 64;
 /** OS file handle */
 using os_file_t = int;
 
+/** Alternatives for the file flush option in Unix; see the InnoDB manual
+about what these mean */
+enum {
+  /** fsync, the default */
+  SRV_UNIX_FSYNC = 1,
+
+  /** Open log files in O_SYNC mode */
+  SRV_UNIX_O_DSYNC,
+
+  /** Do not call os_file_flush() when writing data files, but do
+  flush after writing to log files */
+  SRV_UNIX_LITTLESYNC,
+
+  /** Do not flush after writing */
+  SRV_UNIX_NOSYNC,
+
+  /** Invoke os_file_set_nocache() on data files */
+  SRV_UNIX_O_DIRECT
+ };
+
+/** Alternatives for srv_force_recovery. Non-zero values are intended
+to help the user get a damaged database up so that he can dump intact
+tables and rows with SELECT INTO OUTFILE. The database must not otherwise
+be used with these options! A bigger number below means that all precautions
+of lower numbers are included.
+
+NOTE: The order below is important, the code uses <= and >= to check
+for recovery levels. */
+enum ib_recovery_t {
+  /** Stop on all the errors that are listed in the other options below */
+  IB_RECOVERY_DEFAULT,
+
+  /** let the server run even if it detects a corrupt page */
+  IB_RECOVERY_IGNORE_CORRUPT,
+
+  /** Prevent the main thread from running: if a crash would occur in purge,
+     this prevents it */
+  IB_RECOVERY_NO_BACKGROUND,
+
+  /** Do not run trx rollback after recovery */
+  IB_RECOVERY_NO_TRX_UNDO,
+
+  /** Do not look at undo logs when starting the database: InnoDB will treat
+     even incomplete transactions as committed */
+  IB_RECOVERY_NO_UNDO_LOG_SCAN,
+
+  /** Do not do the log roll-forward in connection with recovery */
+  IB_RECOVERY_NO_LOG_REDO
+ };
+
 #include "innodb0valgrind.h"
 #include "ut0dbg.h"
 #include "ut0ut.h"

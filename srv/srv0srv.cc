@@ -31,7 +31,7 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 *****************************************************************************/
 
-/** @file srv/srv0srv.c
+/** @file srv/srv0srv.cc
 The database server main program
 
 Created 10/8/1995 Heikki Tuuri
@@ -259,14 +259,7 @@ thread ensures that we flush the log files at least once per
 second. */
 static time_t srv_last_log_flush_time;
 
-/** The master thread performs various tasks based on the current
-state of IO activity and the level of IO utilization is past
-intervals. Following macros define thresholds for these conditions. */
-#define SRV_PEND_IO_THRESHOLD (PCT_IO(3))
-#define SRV_RECENT_IO_ACTIVITY (PCT_IO(5))
-#define SRV_PAST_IO_ACTIVITY (PCT_IO(200))
 
-Config srv_config{};
 
 /*
         IMPLEMENTATION OF THE SERVER MAIN PROGRAM
@@ -741,7 +734,7 @@ void InnoDB::var_init() noexcept {
  * @return pointer to the slot
  */
 static srv_slot_t *srv_table_get_nth_slot(ulint index) {
-  ut_a(index < OS_THREAD_MAX_N);
+  ut_a(index < state.max_n_threads());
 
   return srv_sys->m_threads + index;
 }
@@ -827,7 +820,7 @@ ulint InnoDB::release_threads(srv_thread_type type, ulint n) noexcept {
 
   ulint count = 0;
 
-  for (ulint i = 0; i < OS_THREAD_MAX_N; i++) {
+  for (ulint i = 0; i < state.max_n_threads(); i++) {
 
     auto slot = srv_table_get_nth_slot(i);
 
@@ -859,11 +852,11 @@ void InnoDB::init() noexcept {
 
   mutex_create(&srv_innodb_monitor_mutex, IF_DEBUG("monitor_mutex",) IF_SYNC_DEBUG(SYNC_NO_ORDER_CHECK,) Current_location());
 
-  srv_sys->m_threads = static_cast<srv_slot_t *>(mem_alloc(OS_THREAD_MAX_N * sizeof(srv_slot_t)));
+  srv_sys->m_threads = static_cast<srv_slot_t *>(mem_alloc(state.max_n_threads() * sizeof(srv_slot_t)));
 
   srv_slot_t *slot;
 
-  for (ulint i = 0; i < OS_THREAD_MAX_N; i++) {
+  for (ulint i = 0; i < state.max_n_threads(); i++) {
     slot = srv_table_get_nth_slot(i);
     slot->m_in_use = false;
     slot->m_type = SRV_NONE;
@@ -871,11 +864,11 @@ void InnoDB::init() noexcept {
     ut_a(slot->m_event);
   }
 
-  srv_client_table = static_cast<srv_slot_t *>(mem_alloc(OS_THREAD_MAX_N * sizeof(srv_slot_t)));
+  srv_client_table = static_cast<srv_slot_t *>(mem_alloc(state.max_n_threads() * sizeof(srv_slot_t)));
 
   slot = srv_client_table;
 
-  for (ulint i = 0; i < OS_THREAD_MAX_N; ++i, ++slot) {
+  for (ulint i = 0; i < state.max_n_threads(); ++i, ++slot) {
     slot->m_in_use = false;
     slot->m_type = SRV_NONE;
     slot->m_event = os_event_create(nullptr);
@@ -895,11 +888,11 @@ void InnoDB::init() noexcept {
 
   UT_LIST_INIT(srv_conc_queue);
 
-  srv_conc_slots = static_cast<srv_conc_slot_t *>(mem_alloc(OS_THREAD_MAX_N * sizeof(srv_conc_slot_t)));
+  srv_conc_slots = static_cast<srv_conc_slot_t *>(mem_alloc(state.max_n_threads() * sizeof(srv_conc_slot_t)));
 
   auto conc_slot = srv_conc_slots;
 
-  for (ulint i = 0; i < OS_THREAD_MAX_N; ++i, ++conc_slot) {
+  for (ulint i = 0; i < state.max_n_threads(); ++i, ++conc_slot) {
     conc_slot->m_reserved = false;
     conc_slot->m_event = os_event_create(nullptr);
     ut_a(conc_slot->m_event);
@@ -907,7 +900,7 @@ void InnoDB::init() noexcept {
 }
 
 void InnoDB::free() noexcept {
-  for (ulint i{}; i < OS_THREAD_MAX_N; ++i) {
+  for (ulint i{}; i < state.max_n_threads(); ++i) {
     auto slot = srv_table_get_nth_slot(i);
     auto conc_slot = srv_conc_slots + i;
 
@@ -948,13 +941,13 @@ void InnoDB::general_init() noexcept {
 /** Normalizes init parameter values to use units we use inside InnoDB.
 @return	DB_SUCCESS or error code */
 static db_err srv_normalize_init_values() {
-  srv_config.m_log_file_size = srv_config.m_log_file_curr_size / UNIV_PAGE_SIZE;
-  srv_config.m_log_file_curr_size = srv_config.m_log_file_size * UNIV_PAGE_SIZE;
+  state.srv_config.m_log_file_size = state.srv_config.m_log_file_curr_size / UNIV_PAGE_SIZE;
+  state.srv_config.m_log_file_curr_size = state.srv_config.m_log_file_size * UNIV_PAGE_SIZE;
 
-  srv_config.m_log_buffer_size = srv_config.m_log_buffer_curr_size / UNIV_PAGE_SIZE;
-  srv_config.m_log_buffer_curr_size = srv_config.m_log_buffer_size * UNIV_PAGE_SIZE;
+  state.srv_config.m_log_buffer_size = state.srv_config.m_log_buffer_curr_size / UNIV_PAGE_SIZE;
+  state.srv_config.m_log_buffer_curr_size = state.srv_config.m_log_buffer_size * UNIV_PAGE_SIZE;
 
-  srv_config.m_lock_table_size = 5 * (srv_config.m_buf_pool_size / UNIV_PAGE_SIZE);
+  state.srv_config.m_lock_table_size = 5 * (state.srv_config.m_buf_pool_size / UNIV_PAGE_SIZE);
 
   return DB_SUCCESS;
 }
@@ -1012,7 +1005,7 @@ static srv_slot_t *srv_table_reserve_slot_for_user_thread() {
   while (slot->m_in_use) {
     i++;
 
-    if (i >= OS_THREAD_MAX_N) {
+    if (i >= state.max_n_threads()) {
 
       log_err(std::format(
         "There appear to be {} user threads currently waiting"
@@ -1023,7 +1016,7 @@ static srv_slot_t *srv_table_reserve_slot_for_user_thread() {
         (ulong)i
       ));
 
-      for (i = 0; i < OS_THREAD_MAX_N; i++) {
+      for (i = 0; i < state.max_n_threads(); i++) {
 
         slot = srv_client_table + i;
 
@@ -1200,7 +1193,7 @@ void InnoDB::suspend_user_thread(que_thr_t *thr) noexcept {
 void InnoDB::release_user_thread_if_suspended(que_thr_t *thr) noexcept {
   ut_ad(mutex_own(&kernel_mutex));
 
-  for (ulint i{}; i < OS_THREAD_MAX_N; ++i) {
+  for (ulint i{}; i < state.max_n_threads(); ++i) {
 
     auto slot = srv_client_table + i;
 
@@ -1521,7 +1514,7 @@ loop:
       last_srv_print_monitor = false;
     }
 
-    if (srv_config.m_status) {
+    if (state.srv_config.m_status) {
       mutex_enter(&srv_monitor_file_mutex);
 
       if (!printf_innodb_monitor(ib_stream, MUTEX_NOWAIT(mutex_skipped), nullptr, nullptr)) {
@@ -1623,7 +1616,7 @@ void *InnoDB::lock_timeout_thread(void *) noexcept {
     /* Check of all slots if a thread is waiting there, and if it
     has exceeded the time limit */
 
-    for (ulint i = 0; i < OS_THREAD_MAX_N; i++) {
+    for (ulint i = 0; i < state.max_n_threads(); i++) {
 
       auto slot = srv_client_table + i;
 
@@ -1826,7 +1819,7 @@ loop:
 
   mutex_exit(&kernel_mutex);
 
-  if (srv_config.m_force_recovery >= IB_RECOVERY_NO_BACKGROUND) {
+  if (state.srv_config.m_force_recovery >= IB_RECOVERY_NO_BACKGROUND) {
 
     goto suspend_thread;
   }
@@ -1863,7 +1856,7 @@ loop:
 
     srv_main_thread_op_info = "";
 
-    if (srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > SRV_SHUTDOWN_NONE) {
+    if (state.srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > SRV_SHUTDOWN_NONE) {
 
       goto background_loop;
     }
@@ -1878,13 +1871,13 @@ loop:
 
     n_ios = log_sys->m_n_log_ios + srv_buf_pool->m_stat.n_pages_read + srv_buf_pool->m_stat.n_pages_written;
 
-    if (unlikely(srv_buf_pool->get_modified_ratio_pct() > srv_config.m_max_buf_pool_modified_pct)) {
+    if (unlikely(srv_buf_pool->get_modified_ratio_pct() > state.srv_config.m_max_buf_pool_modified_pct)) {
 
       /* Try to keep the number of modified pages in the
       buffer pool under the limit wished by the user */
 
       srv_main_thread_op_info = "flushing buffer pool pages";
-      n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, PCT_IO(100), IB_UINT64_T_MAX);
+      n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, state.pct_io(100), IB_UINT64_T_MAX);
 
       /* If we had to do the flush, it may have taken
       even more than 1 second, and also, there may be more
@@ -1893,19 +1886,18 @@ loop:
 
       skip_sleep = true;
 
-    } else if (srv_config.m_adaptive_flushing) {
+    } else if (state.srv_config.m_adaptive_flushing) {
 
       /* Try to keep the rate of flushing of dirty
       pages such that redo log generation does not
       produce bursts of IO at checkpoint time. */
-      ulint n_flush = srv_buf_pool->m_flusher->get_desired_flush_rate();
 
-      if (n_flush) {
+      if (ulint n_flush = srv_buf_pool->m_flusher->get_desired_flush_rate()) {
         srv_main_thread_op_info = "flushing buffer pool pages";
-        n_flush = std::min(PCT_IO(100), n_flush);
+        n_flush = std::min(state.pct_io(100), n_flush);
         n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, n_flush, IB_ULONGLONG_MAX);
 
-        if (n_flush == PCT_IO(100)) {
+        if (n_flush == state.pct_io(100)) {
           skip_sleep = true;
         }
       }
@@ -1934,10 +1926,10 @@ loop:
 
   ++srv_main_10_second_loops;
 
-  if (n_pend_ios < SRV_PEND_IO_THRESHOLD && (n_ios - n_ios_very_old < SRV_PAST_IO_ACTIVITY)) {
+  if (n_pend_ios < state.pend_io_threshold() && (n_ios - n_ios_very_old < state.past_io_activity())) {
 
     srv_main_thread_op_info = "flushing buffer pool pages";
-    srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, PCT_IO(100), IB_ULONGLONG_MAX);
+    srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, state.pct_io(100), IB_ULONGLONG_MAX);
 
     /* Flush logs if needed */
     srv_sync_log_buffer_in_background();
@@ -1950,7 +1942,7 @@ loop:
   were active */
   do {
 
-    if (srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > 0) {
+    if (state.srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > 0) {
 
       goto background_loop;
     }
@@ -1967,19 +1959,19 @@ loop:
 
   /* Flush a few oldest pages to make a new checkpoint younger */
 
-  if (srv_buf_pool->get_modified_ratio_pct() > srv_config.m_max_buf_pool_modified_pct) {
+  if (srv_buf_pool->get_modified_ratio_pct() > state.srv_config.m_max_buf_pool_modified_pct) {
 
     /* If there are lots of modified pages in the buffer pool
     (> 70 %), we assume we can afford reserving the disk(s) for
     the time it requires to flush 100 pages */
 
-    n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, PCT_IO(100), IB_UINT64_T_MAX);
+    n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, state.pct_io(100), IB_UINT64_T_MAX);
   } else {
     /* Otherwise, we only flush a small number of pages so that
     we do not unnecessarily use much disk i/o capacity from
     other work */
 
-    n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, PCT_IO(10), IB_UINT64_T_MAX);
+    n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, state.pct_io(10), IB_UINT64_T_MAX);
   }
 
   srv_main_thread_op_info = "making checkpoint";
@@ -2036,7 +2028,7 @@ background_loop:
 
   /* Run a full purge */
   do {
-    if (srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > 0) {
+    if (state.srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > 0) {
 
       break;
     }
@@ -2072,8 +2064,8 @@ background_loop:
 flush_loop:
   srv_main_thread_op_info = "flushing buffer pool pages";
   srv_main_flush_loops++;
-  if (srv_config.m_fast_shutdown != IB_SHUTDOWN_NO_BUFPOOL_FLUSH) {
-    n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, PCT_IO(100), IB_UINT64_T_MAX);
+  if (state.srv_config.m_fast_shutdown != IB_SHUTDOWN_NO_BUFPOOL_FLUSH) {
+    n_pages_flushed = srv_buf_pool->m_flusher->batch(srv_dblwr, BUF_FLUSH_LIST, state.pct_io(100), IB_UINT64_T_MAX);
   } else {
     /* In the fastest shutdown we do not flush the buffer pool
     to data files: we set n_pages_flushed to 0 artificially. */
@@ -2106,7 +2098,7 @@ flush_loop:
     } 
   }
 
-  if (srv_buf_pool->get_modified_ratio_pct() > srv_config.m_max_buf_pool_modified_pct) {
+  if (srv_buf_pool->get_modified_ratio_pct() > state.srv_config.m_max_buf_pool_modified_pct) {
 
     /* Try to keep the number of modified pages in the
     buffer pool under the limit wished by the user */
@@ -2125,7 +2117,7 @@ flush_loop:
 
   /* Keep looping in the background loop if still work to do */
 
-  if (srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > 0) {
+  if (state.srv_config.m_fast_shutdown != IB_SHUTDOWN_NORMAL && srv_shutdown_state > 0) {
     if (n_tables_to_drop + n_pages_flushed != 0) {
 
       /* If we are doing a fast shutdown (= the default) we do not do purge.

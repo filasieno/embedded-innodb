@@ -297,7 +297,7 @@ static ib_err_t ib_cfg_var_set_log_group_home_dir(struct ib_cfg_var *cfg_var, co
   ut_a(strcasecmp(cfg_var->name, "log_group_home_dir") == 0);
   ut_a(cfg_var->type == IB_CFG_TEXT);
 
-  ut_a(srv_config.m_log_group_home_dir == nullptr);
+  ut_a(state.srv_config.m_log_group_home_dir == nullptr);
 
   value_str = *(char **)value;
 
@@ -328,15 +328,15 @@ static ib_err_t ib_cfg_var_set_flush_method(struct ib_cfg_var *cfg_var, const vo
   value_str = *(const char **)value;
 
   if (0 == strcmp(value_str, "fsync")) {
-    srv_config.m_unix_file_flush_method = SRV_UNIX_FSYNC;
+    state.srv_config.m_unix_file_flush_method = SRV_UNIX_FSYNC;
   } else if (0 == strcmp(value_str, "O_DSYNC")) {
-    srv_config.m_unix_file_flush_method = SRV_UNIX_O_DSYNC;
+    state.srv_config.m_unix_file_flush_method = SRV_UNIX_O_DSYNC;
   } else if (0 == strcmp(value_str, "O_DIRECT")) {
-    srv_config.m_unix_file_flush_method = SRV_UNIX_O_DIRECT;
+    state.srv_config.m_unix_file_flush_method = SRV_UNIX_O_DIRECT;
   } else if (0 == strcmp(value_str, "littlesync")) {
-    srv_config.m_unix_file_flush_method = SRV_UNIX_LITTLESYNC;
+    state.srv_config.m_unix_file_flush_method = SRV_UNIX_LITTLESYNC;
   } else if (0 == strcmp(value_str, "nosync")) {
-    srv_config.m_unix_file_flush_method = SRV_UNIX_NOSYNC;
+    state.srv_config.m_unix_file_flush_method = SRV_UNIX_NOSYNC;
   } else {
     err = DB_INVALID_INPUT;
   }
@@ -432,7 +432,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, nullptr),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_adaptive_flushing)},
+   STRUCT_FLD(tank, &state.srv_config.m_adaptive_flushing)},
 
   {STRUCT_FLD(name, "additional_mem_pool_size"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -442,7 +442,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_mem_pool_size)},
+   STRUCT_FLD(tank, &state.srv_config.m_mem_pool_size)},
 
   {STRUCT_FLD(name, "buffer_pool_size"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -452,7 +452,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_buf_pool_size)},
+   STRUCT_FLD(tank, &state.srv_config.m_buf_pool_size)},
 
   {STRUCT_FLD(name, "checksums"),
    STRUCT_FLD(type, IB_CFG_IBOOL),
@@ -462,7 +462,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, nullptr),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_use_checksums)},
+   STRUCT_FLD(tank, &state.srv_config.m_use_checksums)},
 
   {STRUCT_FLD(name, "data_file_path"),
    STRUCT_FLD(type, IB_CFG_TEXT),
@@ -482,7 +482,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_data_home_dir),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_data_home)},
+   STRUCT_FLD(tank, &state.srv_config.m_data_home)},
 
   {STRUCT_FLD(name, "doublewrite"),
    STRUCT_FLD(type, IB_CFG_IBOOL),
@@ -492,7 +492,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, nullptr),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_use_doublewrite_buf)},
+   STRUCT_FLD(tank, &state.srv_config.m_use_doublewrite_buf)},
   {STRUCT_FLD(name, "file_per_table"),
    STRUCT_FLD(type, IB_CFG_IBOOL),
    STRUCT_FLD(flag, IB_CFG_FLAG_NONE),
@@ -501,7 +501,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, nullptr),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_file_per_table)},
+   STRUCT_FLD(tank, &state.srv_config.m_file_per_table)},
 
   {STRUCT_FLD(name, "flush_log_at_trx_commit"),
    STRUCT_FLD(type, IB_CFG_ULONG),
@@ -511,7 +511,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_flush_log_at_trx_commit)},
+   STRUCT_FLD(tank, &state.srv_config.m_flush_log_at_trx_commit)},
 
   {STRUCT_FLD(name, "flush_method"),
    STRUCT_FLD(type, IB_CFG_TEXT),
@@ -531,7 +531,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_force_recovery)},
+   STRUCT_FLD(tank, &state.srv_config.m_force_recovery)},
 
   {STRUCT_FLD(name, "io_capacity"),
    STRUCT_FLD(type, IB_CFG_ULONG),
@@ -541,7 +541,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_io_capacity)},
+   STRUCT_FLD(tank, &state.srv_config.m_io_capacity)},
 
   {STRUCT_FLD(name, "lock_wait_timeout"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -561,7 +561,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_log_buffer_curr_size)},
+   STRUCT_FLD(tank, &state.srv_config.m_log_buffer_curr_size)},
 
   {STRUCT_FLD(name, "log_file_size"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -571,7 +571,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_log_file_curr_size)},
+   STRUCT_FLD(tank, &state.srv_config.m_log_file_curr_size)},
 
   {STRUCT_FLD(name, "log_files_in_group"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -581,7 +581,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_n_log_files)},
+   STRUCT_FLD(tank, &state.srv_config.m_n_log_files)},
 
   {STRUCT_FLD(name, "log_group_home_dir"),
    STRUCT_FLD(type, IB_CFG_TEXT),
@@ -601,7 +601,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_max_buf_pool_modified_pct)},
+   STRUCT_FLD(tank, &state.srv_config.m_max_buf_pool_modified_pct)},
 
   {STRUCT_FLD(name, "max_purge_lag"),
    STRUCT_FLD(type, IB_CFG_ULONG),
@@ -611,7 +611,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_max_purge_lag)},
+   STRUCT_FLD(tank, &state.srv_config.m_max_purge_lag)},
 
   {STRUCT_FLD(name, "lru_old_blocks_pct"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -641,7 +641,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_max_n_open_files)},
+   STRUCT_FLD(tank, &state.srv_config.m_max_n_open_files)},
 
   {STRUCT_FLD(name, "read_io_threads"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -651,7 +651,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_n_read_io_threads)},
+   STRUCT_FLD(tank, &state.srv_config.m_n_read_io_threads)},
 
   {STRUCT_FLD(name, "write_io_threads"),
    STRUCT_FLD(type, IB_CFG_ULINT),
@@ -661,7 +661,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_n_write_io_threads)},
+   STRUCT_FLD(tank, &state.srv_config.m_n_write_io_threads)},
 
   /* New, not present in InnoDB/MySQL */
   {STRUCT_FLD(name, "pre_rollback_hook"),
@@ -704,7 +704,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, ib_cfg_var_validate_numeric),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_stats_sample_pages)},
+   STRUCT_FLD(tank, &state.srv_config.m_stats_sample_pages)},
 
   {STRUCT_FLD(name, "status_file"),
    STRUCT_FLD(type, IB_CFG_IBOOL),
@@ -714,7 +714,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, nullptr),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_status)},
+   STRUCT_FLD(tank, &state.srv_config.m_status)},
 
   {STRUCT_FLD(name, "sync_spin_loops"),
    STRUCT_FLD(type, IB_CFG_ULONG),
@@ -734,7 +734,7 @@ static const ib_cfg_var cfg_vars_defaults[] = {
    STRUCT_FLD(validate, nullptr),
    STRUCT_FLD(set, ib_cfg_var_set_generic),
    STRUCT_FLD(get, ib_cfg_var_get_generic),
-   STRUCT_FLD(tank, &srv_config.m_use_sys_malloc)},
+   STRUCT_FLD(tank, &state.srv_config.m_use_sys_malloc)},
 
   {STRUCT_FLD(name, "version"),
    STRUCT_FLD(type, IB_CFG_TEXT),
@@ -935,7 +935,7 @@ ib_err_t ib_cfg_init() {
 
   /* Set the default options. */
   srv_file_flush_method_str = nullptr;
-  srv_config.m_unix_file_flush_method = SRV_UNIX_FSYNC;
+  state.srv_config.m_unix_file_flush_method = SRV_UNIX_FSYNC;
 
 #define IB_CFG_SET(name, var)              \
   if (ib_cfg_set(name, var) != DB_SUCCESS) \
