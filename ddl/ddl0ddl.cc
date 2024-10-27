@@ -137,7 +137,7 @@ bool DDL::add_table_to_background_drop_list(const char *name) noexcept {
 db_err DDL::drop_table(const char *in_name, Trx *trx, bool drop_db) noexcept {
   ut_a(in_name != nullptr);
 
-  if (srv_config.m_created_new_raw) {
+  if (state.srv_config.m_created_new_raw) {
     log_warn("A new raw disk partition was initialized: we do not allow database modifications"
       " by the user. Shut down the server and edit your config file so that newraw is replaced"
       " with raw."
@@ -380,7 +380,7 @@ db_err DDL::drop_table(const char *in_name, Trx *trx, bool drop_db) noexcept {
 
     m_dict->table_remove_from_cache(table);
 
-    if (m_dict->m_loader.load_table(srv_config.m_force_recovery, name_copy) != nullptr) {
+    if (m_dict->m_loader.load_table(state.srv_config.m_force_recovery, name_copy) != nullptr) {
       log_err(std::format("Not able to remove table id: {} name: {} from the dictionary cache", table->m_id, name_copy));
       err = DB_ERROR;
     }
@@ -417,7 +417,7 @@ db_err DDL::create_table(Table *table, Trx *trx) noexcept {
   ut_ad(mutex_own(&m_dict->m_mutex));
   ut_ad(trx->m_dict_operation_lock_mode == RW_X_LATCH);
 
-  if (srv_config.m_created_new_raw) {
+  if (state.srv_config.m_created_new_raw) {
     log_err(
       "A new raw disk partition was initialized: we do not allow database modifications"
       " by the user. Shut down the database and edit your config file so that newraw is replaced with raw."
@@ -617,7 +617,7 @@ db_err DDL::truncate_table(Table *table, Trx *trx) noexcept{
   redo log records on the truncated tablespace, we will assign
   a new tablespace identifier to the truncated tablespace. */
 
-  if (srv_config.m_created_new_raw) {
+  if (state.srv_config.m_created_new_raw) {
     log_info(
       "A new raw disk partition was initialized: we do not allow database modifications"
       " by the user. Shut down server and edit config file so that newraw is replaced with raw."
@@ -920,7 +920,7 @@ db_err DDL::rename_table(const char *old_name, const char *new_name, Trx *trx) n
     return err;
   };
 
-  if (srv_config.m_created_new_raw || srv_config.m_force_recovery != IB_RECOVERY_DEFAULT) {
+  if (state.srv_config.m_created_new_raw || state.srv_config.m_force_recovery != IB_RECOVERY_DEFAULT) {
     log_err(
       "A new raw disk partition was initialized or innodb_force_recovery is on: we do not allow"
       " database modifications by the user. Shut down the server and ensure that newraw is replaced"
@@ -1081,7 +1081,7 @@ db_err DDL::rename_index(const char *table_name, const char *old_name, const cha
   ut_a(old_name != nullptr);
   ut_a(table_name != nullptr);
 
-  if (srv_config.m_created_new_raw || srv_config.m_force_recovery != IB_RECOVERY_DEFAULT) {
+  if (state.srv_config.m_created_new_raw || state.srv_config.m_force_recovery != IB_RECOVERY_DEFAULT) {
     log_err(
       "A new raw disk partition was initialized or innodb_force_recovery is on: we do not allow"
       " database modifications by the user. Shut down the server and ensure that newraw is"

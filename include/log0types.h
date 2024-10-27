@@ -33,8 +33,6 @@ constexpr ulint LOG_RECOVER = 98887331;
 /* The counting of lsn's starts from this value: this must be non-zero */
 constexpr auto LOG_START_LSN = lsn_t(16 * IB_FILE_BLOCK_SIZE);
 
-#define LOG_BUFFER_SIZE (srv_config.m_log_buffer_size * UNIV_PAGE_SIZE)
-
 /* Offsets of a log block header */
 
 /** block number which must be > 0 and is allowed to wrap around at 2G; the

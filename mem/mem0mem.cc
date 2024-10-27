@@ -22,6 +22,7 @@ The memory management
 Created 6/9/1994 Heikki Tuuri
 *************************************************************************/
 
+#include <srv0state.h>
 #include <stdarg.h>
 
 #include "buf0buf.h"
@@ -361,7 +362,7 @@ void mem_heap_block_free(mem_heap_t *heap, mem_block_t *block) {
 
   block->magic_n = MEM_FREED_BLOCK_MAGIC_N;
 
-  if (!srv_config.m_use_sys_malloc) {
+  if (!state.srv_config.m_use_sys_malloc) {
     UNIV_MEM_ASSERT_AND_FREE(block, len);
   }
   if (type == MEM_HEAP_DYNAMIC || len < UNIV_PAGE_SIZE / 2) {

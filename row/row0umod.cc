@@ -662,7 +662,7 @@ db_err row_undo_mod(Undo_node *node, que_thr_t *thr) {
   ut_ad(node->state == UNDO_NODE_MODIFY);
 
   // FIXME: Get rid of this global variable access
-  row_undo_mod_parse_undo_rec(srv_config.m_force_recovery, node, thr);
+  row_undo_mod_parse_undo_rec(state.srv_config.m_force_recovery, node, thr);
 
   if (!node->table || !row_undo_search_clust_to_pcur(node)) {
     /* It is already undone, or will be undone by another query

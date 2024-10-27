@@ -1225,7 +1225,7 @@ static void recv_report_corrupt_log(byte *ptr, byte type, space_id_t space, page
     log_warn_buf(recv_sys->m_buf + recv_previous_parsed_rec_offset - 100, ptr - recv_sys->m_buf + 200 - recv_previous_parsed_rec_offset);
   }
 
-  if (!srv_config.m_force_recovery) {
+  if (!state.srv_config.m_force_recovery) {
     log_fatal("Set innodb_force_recovery to ignore this error.");
   }
 
@@ -1601,7 +1601,7 @@ static bool recv_scan_log_recs(
 
         recv_sys->m_found_corrupt_log = true;
 
-        if (!srv_config.m_force_recovery) {
+        if (!state.srv_config.m_force_recovery) {
           log_fatal("Set innodb_force_recovery to ignore this error.");
         }
 
@@ -1961,10 +1961,10 @@ void recv_recovery_rollback_active() noexcept {
   sync_order_checks_on = true;
 #endif
 
-  (void) srv_dict_sys->m_ddl.drop_all_temp_indexes(ib_recovery_t(srv_config.m_force_recovery));
-  (void) srv_dict_sys->m_ddl.drop_all_temp_tables(ib_recovery_t(srv_config.m_force_recovery));
+  (void) srv_dict_sys->m_ddl.drop_all_temp_indexes(ib_recovery_t(state.srv_config.m_force_recovery));
+  (void) srv_dict_sys->m_ddl.drop_all_temp_tables(ib_recovery_t(state.srv_config.m_force_recovery));
 
-  if (srv_config.m_force_recovery < IB_RECOVERY_NO_TRX_UNDO) {
+  if (state.srv_config.m_force_recovery < IB_RECOVERY_NO_TRX_UNDO) {
     /* Rollback the uncommitted transactions which have no user
     session */
 

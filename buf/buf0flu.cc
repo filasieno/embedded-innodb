@@ -333,7 +333,7 @@ void Buf_flush::buffered_writes(DBLWR *dblwr) {
   ulint len2;
   byte *write_buf;
 
-  if (!srv_config.m_use_doublewrite_buf || dblwr == nullptr) {
+  if (!state.srv_config.m_use_doublewrite_buf || dblwr == nullptr) {
     /* Sync the writes to the disk. */
     sync_datafiles();
     return;
@@ -563,7 +563,7 @@ void Buf_flush::write_block_low(DBLWR *dblwr, Buf_page *bpage) {
       break;
   }
 
-  if (!srv_config.m_use_doublewrite_buf || dblwr == nullptr) {
+  if (!state.srv_config.m_use_doublewrite_buf || dblwr == nullptr) {
     srv_fil->io(IO_request::Async_write, true, bpage->get_space(), bpage->get_page_no(), 0, UNIV_PAGE_SIZE, frame, bpage);
   } else {
     post_to_doublewrite_buf(dblwr, bpage);

@@ -24,6 +24,8 @@ Created 11/26/1995 Heikki Tuuri
 
 #include "mtr0mtr.h"
 
+#include <srv0state.h>
+
 #include "buf0buf.h"
 #include "log0log.h"
 #include "log0recv.h"
@@ -143,7 +145,7 @@ void mtr_t::commit() noexcept {
   const auto write_log = m_modifications > 0 && m_n_log_recs > 0;
 
   if (write_log) {
-    mtr_log_reserve_and_write(this, log_sys, srv_config.m_force_recovery);
+    mtr_log_reserve_and_write(this, log_sys, state.srv_config.m_force_recovery);
   }
 
   /* We first update the modification info to buffer pages, and only

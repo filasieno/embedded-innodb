@@ -1986,14 +1986,14 @@ void Btree_cursor::estimate_number_of_different_key_vals(const Index *index) noe
 
   /* It makes no sense to test more pages than are contained
   in the index, thus we lower the number if it is too high */
-  if (srv_config.m_stats_sample_pages > index->m_stats.m_index_size) {
+  if (state.srv_config.m_stats_sample_pages > index->m_stats.m_index_size) {
     if (index->m_stats.m_index_size > 0) {
       n_sample_pages = index->m_stats.m_index_size;
     } else {
       n_sample_pages = 1;
     }
   } else {
-    n_sample_pages = srv_config.m_stats_sample_pages;
+    n_sample_pages = state.srv_config.m_stats_sample_pages;
   }
 
   /* We sample some pages in the index to get an estimate */

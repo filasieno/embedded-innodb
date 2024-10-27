@@ -315,7 +315,7 @@ static Table *ib_open_table_by_id(ib_id_t tid, bool locked) noexcept {
     srv_dict_sys->mutex_acquire();
   }
 
-  auto table = srv_dict_sys->table_get_using_id(srv_config.m_force_recovery, Dict_id{table_id}, true);
+  auto table = srv_dict_sys->table_get_using_id(state.srv_config.m_force_recovery, Dict_id{table_id}, true);
 
   if (table != nullptr && table->m_ibd_file_missing) {
 
@@ -2336,7 +2336,7 @@ ib_err_t ib_cursor_open_index_using_name(ib_crsr_t ib_open_crsr, const char *ind
   }
 
   /* We want to increment the ref count, so we do a redundant search. */
-  table = srv_dict_sys->table_get_using_id(srv_config.m_force_recovery, cursor->prebuilt->table->m_id, true);
+  table = srv_dict_sys->table_get_using_id(state.srv_config.m_force_recovery, cursor->prebuilt->table->m_id, true);
   ut_a(table != nullptr);
 
   if (trx != nullptr && !ib_schema_lock_is_exclusive((ib_trx_t)trx)) {
@@ -3075,7 +3075,7 @@ ib_err_t ib_cursor_prev(ib_crsr_t ib_crsr) {
 
   Row_sel::cache_next(prebuilt);
 
-  return srv_row_sel->mvcc_fetch(srv_config.m_force_recovery, IB_CUR_L, prebuilt, ROW_SEL_DEFAULT, ROW_SEL_PREV);
+  return srv_row_sel->mvcc_fetch(state.srv_config.m_force_recovery, IB_CUR_L, prebuilt, ROW_SEL_DEFAULT, ROW_SEL_PREV);
 }
 
 ib_err_t ib_cursor_next(ib_crsr_t ib_crsr) {
@@ -3089,7 +3089,7 @@ ib_err_t ib_cursor_next(ib_crsr_t ib_crsr) {
 
   Row_sel::cache_next(prebuilt);
 
-  return srv_row_sel->mvcc_fetch(srv_config.m_force_recovery, IB_CUR_G, prebuilt, ROW_SEL_DEFAULT, ROW_SEL_NEXT);
+  return srv_row_sel->mvcc_fetch(state.srv_config.m_force_recovery, IB_CUR_G, prebuilt, ROW_SEL_DEFAULT, ROW_SEL_NEXT);
 }
 
 /**
@@ -3109,7 +3109,7 @@ static ib_err_t ib_cursor_position(ib_cursor_t *cursor, ib_srch_mode_t mode) {
   uses the search_tuple fields to work out what to do. */
   dtuple_set_n_fields(prebuilt->search_tuple, 0);
 
-  return srv_row_sel->mvcc_fetch(srv_config.m_force_recovery, mode, prebuilt, ROW_SEL_DEFAULT, ROW_SEL_MOVETO);
+  return srv_row_sel->mvcc_fetch(state.srv_config.m_force_recovery, mode, prebuilt, ROW_SEL_DEFAULT, ROW_SEL_MOVETO);
 }
 
 ib_err_t ib_cursor_first(ib_crsr_t ib_crsr) {
@@ -3150,7 +3150,7 @@ ib_err_t ib_cursor_moveto(ib_crsr_t ib_crsr, ib_tpl_t ib_tpl, ib_srch_mode_t ib_
 
   ut_a(prebuilt->select_lock_type <= LOCK_NUM);
 
-  auto err = srv_row_sel->mvcc_fetch(srv_config.m_force_recovery, ib_srch_mode, prebuilt, (ib_match_t)cursor->match_mode, ROW_SEL_MOVETO);
+  auto err = srv_row_sel->mvcc_fetch(state.srv_config.m_force_recovery, ib_srch_mode, prebuilt, (ib_match_t)cursor->match_mode, ROW_SEL_MOVETO);
 
   *result = prebuilt->result;
 
@@ -3915,7 +3915,7 @@ bool ib_database_create(const char *dbname) {
   }
 
   /* Only necessary if file per table is set. */
-  if (srv_config.m_file_per_table) {
+  if (state.srv_config.m_file_per_table) {
     return srv_fil->mkdir(dbname);
   }
 
@@ -3948,7 +3948,7 @@ ib_err_t ib_database_drop(const char *dbname) {
   auto err = srv_dict_sys->m_ddl.drop_database(ptr, (Trx *)ib_trx);
 
   /* Only necessary if file per table is set. */
-  if (err == DB_SUCCESS && srv_config.m_file_per_table) {
+  if (err == DB_SUCCESS && state.srv_config.m_file_per_table) {
     srv_fil->rmdir(ptr);
   }
 

@@ -16,14 +16,13 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 *****************************************************************************/
 
-/** @file trx/trx0trx.c
+/** @file trx/trx0trx.cc
 The transaction
 
 Created 3/26/1996 Heikki Tuuri
 *******************************************************/
 
 #include "api0misc.h"
-#include "api0ucode.h"
 #include "lock0lock.h"
 #include "log0log.h"
 #include "os0proc.h"
@@ -35,7 +34,6 @@ Created 3/26/1996 Heikki Tuuri
 #include "trx0trx.h"
 #include "trx0undo.h"
 #include "trx0xa.h"
-#include "usr0sess.h"
 
 /* Threads with unknown id. */
 os_thread_id_t NULL_THREAD_ID;
@@ -351,17 +349,17 @@ void Trx::commit_off_kernel() noexcept {
       m_must_flush_log_later = true;
     } else
 #endif /* WITH_XOPEN */
-      if (srv_config.m_flush_log_at_trx_commit == 0) {
+      if (state.srv_config.m_flush_log_at_trx_commit == 0) {
         /* Do nothing */
-      } else if (srv_config.m_flush_log_at_trx_commit == 1) {
-        if (srv_config.m_unix_file_flush_method == SRV_UNIX_NOSYNC) {
+      } else if (state.srv_config.m_flush_log_at_trx_commit == 1) {
+        if (state.srv_config.m_unix_file_flush_method == SRV_UNIX_NOSYNC) {
           /* Write the log but do not flush it to disk */
           log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, false);
         } else {
           /* Write the log to the log files AND flush them to disk */
           log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, true);
         }
-      } else if (srv_config.m_flush_log_at_trx_commit == 2) {
+      } else if (state.srv_config.m_flush_log_at_trx_commit == 2) {
         /* Write the log but do not flush it to disk */
         log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, false);
       } else {
@@ -963,17 +961,17 @@ void Trx::prepare_for_commit() noexcept {
 
     auto log = m_trx_sys->m_fsp->m_log;
 
-    if (srv_config.m_flush_log_at_trx_commit == 0) {
+    if (state.srv_config.m_flush_log_at_trx_commit == 0) {
       /* Do nothing */
-    } else if (srv_config.m_flush_log_at_trx_commit == 1) {
-      if (srv_config.m_unix_file_flush_method == SRV_UNIX_NOSYNC) {
+    } else if (state.srv_config.m_flush_log_at_trx_commit == 1) {
+      if (state.srv_config.m_unix_file_flush_method == SRV_UNIX_NOSYNC) {
         /* Write the log but do not flush it to disk */
         log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, false);
       } else {
         /* Write the log to the log files AND flush them to disk */
         log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, true);
       }
-    } else if (srv_config.m_flush_log_at_trx_commit == 2) {
+    } else if (state.srv_config.m_flush_log_at_trx_commit == 2) {
       /* Write the log but do not flush it to disk */
       log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, false);
     } else {
@@ -1011,17 +1009,17 @@ ulint Trx::commit_flush_log() noexcept {
 
   if (!m_must_flush_log_later) {
     /* Do nothing */
-  } else if (srv_config.m_flush_log_at_trx_commit == 0) {
+  } else if (state.srv_config.m_flush_log_at_trx_commit == 0) {
     /* Do nothing */
-  } else if (srv_config.m_flush_log_at_trx_commit == 1) {
-    if (srv_config.m_unix_file_flush_method == SRV_UNIX_NOSYNC) {
+  } else if (state.srv_config.m_flush_log_at_trx_commit == 1) {
+    if (state.srv_config.m_unix_file_flush_method == SRV_UNIX_NOSYNC) {
       /* Write the log but do not flush it to disk */
       log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, false);
     } else {
       /* Write the log to the log files AND flush them to disk */
       log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, true);
     }
-  } else if (srv_config.m_flush_log_at_trx_commit == 2) {
+  } else if (state.srv_config.m_flush_log_at_trx_commit == 2) {
     /* Write the log but do not flush it to disk */
     log->write_up_to(lsn, LOG_WAIT_ONE_GROUP, false);
   } else {

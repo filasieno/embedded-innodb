@@ -61,26 +61,6 @@ enum {
   SRV_RAW
 };
 
-/** Alternatives for the file flush option in Unix; see the InnoDB manual
-about what these mean */
-enum {
-  /** fsync, the default */
-  SRV_UNIX_FSYNC = 1,
-
-  /** Open log files in O_SYNC mode */
-  SRV_UNIX_O_DSYNC,
-
-  /** Do not call os_file_flush() when writing data files, but do
-  flush after writing to log files */
-  SRV_UNIX_LITTLESYNC,
-
-  /** Do not flush after writing */
-  SRV_UNIX_NOSYNC,
-
-  /** Invoke os_file_set_nocache() on data files */
-  SRV_UNIX_O_DIRECT
-};
-
 /** Shutdown state */
 enum srv_shutdown_state {
   /** Database running normally */
@@ -132,35 +112,7 @@ extern const char *srv_main_thread_op_info;
 thread starts running */
 extern Cond_var* srv_lock_timeout_thread_event;
 
-/** Alternatives for srv_force_recovery. Non-zero values are intended
-to help the user get a damaged database up so that he can dump intact
-tables and rows with SELECT INTO OUTFILE. The database must not otherwise
-be used with these options! A bigger number below means that all precautions
-of lower numbers are included.
 
-NOTE: The order below is important, the code uses <= and >= to check
-for recovery levels. */
-enum ib_recovery_t {
-  /** Stop on all the errors that are listed in the other options below */
-  IB_RECOVERY_DEFAULT,
-
-  /** let the server run even if it detects a corrupt page */
-  IB_RECOVERY_IGNORE_CORRUPT,
-
-  /** Prevent the main thread from running: if a crash would occur in purge,
-     this prevents it */
-  IB_RECOVERY_NO_BACKGROUND,
-
-  /** Do not run trx rollback after recovery */
-  IB_RECOVERY_NO_TRX_UNDO,
-
-  /** Do not look at undo logs when starting the database: InnoDB will treat
-     even incomplete transactions as committed */
-  IB_RECOVERY_NO_UNDO_LOG_SCAN,
-
-  /** Do not do the log roll-forward in connection with recovery */
-  IB_RECOVERY_NO_LOG_REDO
-};
 
 /* FIXME: This is set to true if the user has requested it. */
 extern bool srv_lower_case_table_names;
@@ -170,110 +122,7 @@ extern ulint ses_lock_wait_timeout;
 /* FIXME: This is a session variable. */
 extern bool ses_rollback_on_timeout;
 
-struct Config {
-  /** Location of the system tablespace. */
-  char *m_data_home{};
 
-  /** Location of the redo log group files. */
-  char *m_log_group_home_dir{};
-
-  /** Whether to create a new file for each table. */
-  bool m_file_per_table{};
-
-  /** Whether a new raw disk partition was initialized. */
-  bool m_created_new_raw{};
-
-  /** Number of log files. */
-  ulint m_n_log_files{ULINT_MAX};
-
-  /** Size of each log file, in pages. */
-  ulint m_log_file_size{ULINT_MAX};
-
-  /** Current size of the log file, in pages. */
-   ulint m_log_file_curr_size{ULINT_MAX};
-
-  /** Size of the log buffer, in pages. */
-  ulint m_log_buffer_size{ULINT_MAX};
-
-  /** Current size of the log buffer, in pages. */
-  ulint m_log_buffer_curr_size{ULINT_MAX};
-
-  /** Whether to flush the log at transaction commit. */
-  ulong m_flush_log_at_trx_commit{1};
-  
-  /** Whether to use adaptive flushing. */
-  bool m_adaptive_flushing{true};
-
-  /** Whether to use sys malloc. */
-  bool m_use_sys_malloc{true};
-
-  /** Size of the buffer pool, in pages. */
-  ulint m_buf_pool_size{ULINT_MAX};
-
-  /** Old size of the buffer pool, in pages. */
-  ulint m_buf_pool_old_size{ULINT_MAX};
-  
-  /** Current size of the buffer pool, in pages. */
-  ulint m_buf_pool_curr_size{};
-
-  /** Memory pool size in bytes */
-  ulint m_mem_pool_size{ULINT_MAX};
-
-  /** Size of the lock table, in pages. */
-  ulint m_lock_table_size{ULINT_MAX};
-  
-  /** Number of read I/O threads. */
-  ulint m_n_read_io_threads{ULINT_MAX};
-
-  /** Number of write I/O threads. */
-  ulint m_n_write_io_threads{ULINT_MAX};
-
-  /** User settable value of the number of pages that must be present
-   * in the buffer cache and accessed sequentially for InnoDB to trigger a
-   * readahead request. */
-  ulong m_read_ahead_threshold{56};
-
-  /** Number of IO operations per second the server can do */ 
-  ulong m_io_capacity{200};
-  
-  /** File flush method. */
-  ulint m_unix_file_flush_method{SRV_UNIX_FSYNC};
-  
-  /** Maximum number of open files. */  
-  ulint m_max_n_open_files{1024};
-
-  /** We are prepared for a situation that we have this many threads waiting
-   * for a semaphore inside InnoDB. innobase_start_or_create() sets the value. */
-  ulint m_max_n_threads{0};
-
-  /** Force recovery. */
-  ib_recovery_t m_force_recovery{IB_RECOVERY_DEFAULT};
-
-  /** Fast shutdown. */
-  ib_shutdown_t m_fast_shutdown{IB_SHUTDOWN_NORMAL};
-
-  /** Generate a innodb_status.<pid> file if this is true. */
-  bool m_status{false};
-  
-  /** When estimating number of different key values in an index, sample
-   * this many index pages */
-  uint64_t m_stats_sample_pages{8};
-  
-  /** Whether to use doublewrite buffer. */
-  bool m_use_doublewrite_buf{true};
-  
-  /** Whether to use checksums. */
-  bool m_use_checksums{true};
-
-  /** The InnoDB main thread tries to keep the ratio of modified pages
-   * in the buffer pool to all database pages in the buffer pool smaller than
-   * the following number. But it is not guaranteed that the value stays below
-   * that during a time of heavy update/insert activity. */
-  ulong m_max_buf_pool_modified_pct{90};
-  
-  /* Maximum allowable purge history length. <= 0 means 'infinite'. */
-  ulong m_max_purge_lag{0};
-};
 
 /*-------------------------------------------*/
 
@@ -318,13 +167,6 @@ extern ulint srv_dml_needed_delay;
 extern mutex_t *kernel_mutex_temp;
 
 #define kernel_mutex (*kernel_mutex_temp)
-
-/**
- * Returns the number of IO operations that is X percent of the
- * capacity. PCT_IO(5) -> returns the number of IO operations that
- * is 5% of the max where max is srv_io_capacity.
- */
-#define PCT_IO(p) ((ulong)(srv_config.m_io_capacity * ((double)p / 100.0)))
 
 constexpr ulint SRV_MAX_N_IO_THREADS = 32;
 
@@ -769,5 +611,3 @@ extern Row_sel *srv_row_sel;
 extern Row_update *srv_row_upd;
 
 extern Row_insert *srv_row_ins;
-
-extern Config srv_config;

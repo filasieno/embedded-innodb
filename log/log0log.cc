@@ -23,13 +23,16 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 *****************************************************************************/
 
-/** @file log/log0log.c
+/** @file log/log0log.cc
 Database log
 
 Created 12/9/1995 Heikki Tuuri
 *******************************************************/
 
 #include "log0log.h"
+
+#include <srv0state.h>
+
 #include "buf0buf.h"
 #include "buf0flu.h"
 #include "dict0store.h"
@@ -121,16 +124,16 @@ Log::Log() noexcept {
 
   m_lsn = LOG_START_LSN;
 
-  ut_a(LOG_BUFFER_SIZE >= 16 * IB_FILE_BLOCK_SIZE);
-  ut_a(LOG_BUFFER_SIZE >= 4 * UNIV_PAGE_SIZE);
+  ut_a(state.log_buffer_size() >= 16 * IB_FILE_BLOCK_SIZE);
+  ut_a(state.log_buffer_size() >= 4 * UNIV_PAGE_SIZE);
 
-  m_buf_ptr = static_cast<byte *>(mem_alloc(LOG_BUFFER_SIZE + IB_FILE_BLOCK_SIZE));
+  m_buf_ptr = static_cast<byte *>(mem_alloc(state.log_buffer_size() + IB_FILE_BLOCK_SIZE));
 
   m_buf = static_cast<byte *>(ut_align(m_buf_ptr, IB_FILE_BLOCK_SIZE));
 
-  m_buf_size = LOG_BUFFER_SIZE;
+  m_buf_size = state.log_buffer_size();
 
-  memset(m_buf, '\0', LOG_BUFFER_SIZE);
+  memset(m_buf, '\0', state.log_buffer_size());
 
   m_max_buf_free = m_buf_size / LOG_BUF_FLUSH_RATIO - LOG_BUF_FLUSH_MARGIN;
   m_check_flush_or_checkpoint = true;
@@ -629,7 +632,7 @@ void Log::io_complete(log_group_t *group) noexcept {
     /* It was a checkpoint write */
     group = reinterpret_cast<log_group_t *>(uintptr_t(group) - 1);
 
-    if (srv_config.m_unix_file_flush_method != SRV_UNIX_O_DSYNC && srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC) {
+    if (state.srv_config.m_unix_file_flush_method != SRV_UNIX_O_DSYNC && state.srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC) {
 
       srv_fil->flush(group->space_id);
     }
@@ -642,9 +645,9 @@ void Log::io_complete(log_group_t *group) noexcept {
   /* We currently use synchronous writing of the logs and cannot end up here! */
   ut_error;
 
-  if (srv_config.m_unix_file_flush_method != SRV_UNIX_O_DSYNC &&
-      srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC &&
-      srv_config.m_flush_log_at_trx_commit != 2) {
+  if (state.srv_config.m_unix_file_flush_method != SRV_UNIX_O_DSYNC &&
+      state.srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC &&
+      state.srv_config.m_flush_log_at_trx_commit != 2) {
 
     srv_fil->flush(group->space_id);
   }
@@ -894,7 +897,7 @@ void Log::write_up_to(lsn_t lsn, ulint wait, bool flush_to_disk) noexcept {
 
     release();
 
-    if (srv_config.m_unix_file_flush_method == SRV_UNIX_O_DSYNC) {
+    if (state.srv_config.m_unix_file_flush_method == SRV_UNIX_O_DSYNC) {
       /* O_DSYNC means the OS did not buffer the log file at all:
       so we have also flushed to disk what we have written */
       m_flushed_to_disk_lsn = m_write_lsn;
@@ -1118,7 +1121,7 @@ bool Log::checkpoint(bool sync, bool write_always) noexcept {
     recv_apply_log_recs(srv_dblwr, false);
   }
 
-  if (srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC) {
+  if (state.srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC) {
     srv_fil->flush_file_spaces(FIL_TABLESPACE);
   }
 

@@ -339,7 +339,7 @@ bool Buf_pool::is_corrupted(const byte *read_buf) {
   BUF_NO_CHECKSUM_MAGIC which might be stored by InnoDB with checksums
   disabled. Otherwise, skip checksum calculation and return false */
 
-  if (likely(srv_config.m_use_checksums)) {
+  if (likely(state.srv_config.m_use_checksums)) {
     auto checksum = mach_read_from_4(read_buf + FIL_PAGE_SPACE_OR_CHKSUM);
 
     if (checksum != 0 &&
@@ -572,11 +572,11 @@ bool Buf_pool::open(uint64_t pool_size) {
     return false;
   }
 
-  srv_config.m_buf_pool_old_size = pool_size;
+  state.srv_config.m_buf_pool_old_size = pool_size;
 
   m_curr_size = chunk->size;
 
-  srv_config.m_buf_pool_curr_size = m_curr_size * UNIV_PAGE_SIZE;
+  state.srv_config.m_buf_pool_curr_size = m_curr_size * UNIV_PAGE_SIZE;
 
   m_page_hash = new page_hash_t{};
 
@@ -1442,7 +1442,7 @@ void Buf_pool::io_complete(Buf_page *bpage) {
         " You can also use the force recovery flags."
       );
 
-      if (srv_config.m_force_recovery < IB_RECOVERY_IGNORE_CORRUPT) {
+      if (state.srv_config.m_force_recovery < IB_RECOVERY_IGNORE_CORRUPT) {
         log_fatal("Ending processing because of a corrupt database page.");
       }
     }

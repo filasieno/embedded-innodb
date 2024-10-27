@@ -477,7 +477,7 @@ static bool row_purge_parse_undo_rec(purge_node_t *node, bool *updated_extern, q
   srv_dict_sys->mutex_acquire();
 
   // FIXME: srv_force_recovery should be passed in as an arg
-  node->table = srv_dict_sys->table_get_on_id(srv_config.m_force_recovery, table_id);
+  node->table = srv_dict_sys->table_get_on_id(state.srv_config.m_force_recovery, table_id);
 
   srv_dict_sys->mutex_release();
 
