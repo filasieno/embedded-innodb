@@ -37,6 +37,7 @@ Created 12/9/1995 Heikki Tuuri
 #include "log0recv.h"
 #include "mem0mem.h"
 #include "srv0srv.h"
+#include "srv0state.h"
 #include "sync0rw.h"
 #include "trx0sys.h"
 
@@ -631,7 +632,7 @@ void Log::io_complete(log_group_t *group) noexcept {
 
     if (srv_config.m_unix_file_flush_method != SRV_UNIX_O_DSYNC && srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC) {
 
-      srv_fil->flush(group->space_id);
+      state.srv_fil->flush(group->space_id);
     }
 
     io_complete_checkpoint();
@@ -646,7 +647,7 @@ void Log::io_complete(log_group_t *group) noexcept {
       srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC &&
       srv_config.m_flush_log_at_trx_commit != 2) {
 
-    srv_fil->flush(group->space_id);
+    state.srv_fil->flush(group->space_id);
   }
 
   acquire();
@@ -684,7 +685,7 @@ void Log::group_file_header_flush(log_group_t *group, ulint nth_file, lsn_t star
 
     ++srv_os_log_pending_writes;
 
-    if (srv_fil->io(
+    if (state.srv_fil->io(
       IO_request::Sync_log_write,
       false,
       group->space_id,
@@ -741,7 +742,7 @@ void Log::group_write_buf(log_group_t *group, byte *buf, ulint len, lsn_t start_
       ++m_n_log_ios;
       ++srv_os_log_pending_writes;
 
-      if (srv_fil->io(
+      if (state.srv_fil->io(
         IO_request::Sync_log_write,
         false,
         group->space_id,
@@ -906,7 +907,7 @@ void Log::write_up_to(lsn_t lsn, ulint wait, bool flush_to_disk) noexcept {
       m_flushed_to_disk_lsn = m_write_lsn;
     } else if (flush_to_disk) {
       group = UT_LIST_GET_FIRST(m_log_groups);
-      srv_fil->flush(group->space_id);
+      state.srv_fil->flush(group->space_id);
       m_flushed_to_disk_lsn = m_write_lsn;
     }
 
@@ -1079,7 +1080,7 @@ void Log::group_checkpoint(log_group_t *group) noexcept {
     ++m_n_log_ios;
 
     /* Send the log file write request */
-    if (srv_fil->io(
+    if (state.srv_fil->io(
       IO_request::Async_log_write,
       false,
       group->space_id,
@@ -1102,7 +1103,7 @@ void Log::group_read_checkpoint_info(log_group_t *group, ulint field) noexcept {
 
   ++m_n_log_ios;
 
-  if (srv_fil->io(
+  if (state.srv_fil->io(
     IO_request::Sync_log_read,
     false,
     group->space_id,
@@ -1131,7 +1132,7 @@ bool Log::checkpoint(bool sync, bool write_always) noexcept {
   }
 
   if (srv_config.m_unix_file_flush_method != SRV_UNIX_NOSYNC) {
-    srv_fil->flush_file_spaces(FIL_TABLESPACE);
+    state.srv_fil->flush_file_spaces(FIL_TABLESPACE);
   }
 
   acquire();
@@ -1285,7 +1286,7 @@ void Log::group_read_log_seg(ulint type, byte *buf, log_group_t *group, lsn_t st
 
     ++m_n_log_ios;
 
-    if (srv_fil->io(
+    if (state.srv_fil->io(
       type == LOG_RECOVER ? IO_request::Sync_log_read : IO_request::Async_log_read,
       false,
       group->space_id,

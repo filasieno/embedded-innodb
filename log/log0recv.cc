@@ -532,7 +532,7 @@ static byte *recv_parse_or_apply_log_rec_body(
 
   if (block != nullptr) {
     page = block->m_frame;
-    ut_d(page_type = srv_fil->page_get_type(page));
+    ut_d(page_type = state.srv_fil->page_get_type(page));
   }
 
   switch (type) {
@@ -666,7 +666,7 @@ static byte *recv_parse_or_apply_log_rec_body(
     case MLOG_FILE_CREATE:
     case MLOG_FILE_RENAME:
     case MLOG_FILE_DELETE:
-      ptr = srv_fil->op_log_parse_or_replay(ptr, end_ptr, type, 0, 0);
+      ptr = state.srv_fil->op_log_parse_or_replay(ptr, end_ptr, type, 0, 0);
       break;
     default:
       ptr = nullptr;
@@ -713,7 +713,7 @@ void Recv_sys::add_log_record(
   lsn_t start_lsn,
   lsn_t end_lsn) noexcept
 {
-  if (srv_fil->tablespace_deleted_or_being_deleted_in_mem(space, -1)) {
+  if (state.srv_fil->tablespace_deleted_or_being_deleted_in_mem(space, -1)) {
     /* The tablespace does not exist any more: do not store the
     log record */
 

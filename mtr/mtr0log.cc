@@ -25,10 +25,11 @@ Created 12/7/1995 Heikki Tuuri
 #include "mtr0log.h"
 
 #include "buf0buf.h"
-#include "dict0store.h"
 #include "dict0dict.h"
+#include "dict0store.h"
 #include "log0recv.h"
 #include "page0page.h"
+#include "srv0state.h"
 #include "trx0sys.h"
 
 void mlog_catenate_string(mtr_t *mtr, const byte *str, ulint len) {
@@ -249,7 +250,7 @@ void mlog_log_string(byte *ptr, ulint len, mtr_t *mtr) {
 }
 
 byte *mlog_parse_string(byte *ptr, byte *end_ptr, byte *page) {
-  ut_a(page == nullptr || srv_fil->page_get_type(page) != FIL_PAGE_TYPE_INDEX);
+  ut_a(page == nullptr || state.srv_fil->page_get_type(page) != FIL_PAGE_TYPE_INDEX);
 
   if (end_ptr < ptr + 4) {
 

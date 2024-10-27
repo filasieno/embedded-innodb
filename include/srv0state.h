@@ -31,6 +31,7 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 #ifndef SRV0STATE_H
 #define SRV0STATE_H
 
+#include <atomic>
 #include <fil0fil.h>
 #include <innodb0types.h>
 
@@ -74,8 +75,43 @@ struct InnoDB_state {
   Fil *srv_fil{nullptr};
   /// @}
 
-  /// @name OS InnoDB State varaibles
+  /// @name OS InnoDB state variables
   /// @{
+
+  /// If the following is true, read i/o handler threads try to wait until a batch
+  /// of new read requests have been posted
+  bool os_aio_recommend_sleep_for_read_threads{false};
+
+  /// Number of reads from OS files.
+  ulint os_n_file_reads{0};
+  ulint os_n_file_reads_old{0};
+
+  /// Number of writes to OS files.
+  ulint os_n_file_writes{0};
+  ulint os_n_file_writes_old{0};
+
+  /// Number of flushes to OS files.
+  ulint os_n_fsyncs{0};
+  ulint os_n_fsyncs_old{0};
+
+  /// Number of bytes read since the last printout
+  time_t os_last_printout;
+  ulint os_bytes_read_since_printout{0};
+
+  /// true if os has said that the this is full
+  bool os_has_said_disk_full{false};
+
+  /// Number of pending os_file_pread() operations
+  std::atomic<ulint> os_file_n_pending_preads{};
+
+  /// Number of pending os_file_pwrite() operations
+  std::atomic<ulint> os_file_n_pending_pwrites{};
+
+  /// Number of pending read operations
+  std::atomic<ulint> os_n_pending_reads{};
+
+  /// Number of pending write operations
+  std::atomic<ulint> os_n_pending_writes{};
 
   /// Use large pages. This may be a boot-time option on some platforms.
   bool os_use_large_pages{false};
@@ -83,30 +119,8 @@ struct InnoDB_state {
   /// Large page size. This may be a boot-time option on some platforms
   ulint os_large_page_size{0};
 
-  /// Number of reads from OS files.
-  ulint os_n_file_reads{0};
-
-  /// Number of writes to OS files.
-  ulint os_n_file_writes{0};
-
-  /// Number of flushes to OS files.
-  ulint os_n_fsyncs{0};
-  /// true if os has said that the this is full
-  bool os_has_said_disk_full{false};
-
-  /// Number of pending os_file_pread() operations
-  std::atomic<ulint> os_file_n_pending_preads{0};
-
-  /// Number of pending os_file_pwrite() operations
-  std::atomic<ulint> os_file_n_pending_pwrites{0};
-
-  /// Number of pending read operations
-  std::atomic<ulint> os_n_pending_reads{0};
-
-  /// Number of pending write operations
-  std::atomic<ulint> os_n_pending_writes{0};
-
   /// @}
+
 };
 
 /// @brief A transitory global variable used to collect all global variables in InnoDB.

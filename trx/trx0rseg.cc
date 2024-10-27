@@ -24,6 +24,8 @@ Created 3/26/1996 Heikki Tuuri
 
 #include "trx0rseg.h"
 
+#include <srv0state.h>
+
 #include "fut0lst.h"
 #include "srv0srv.h"
 #include "trx0purge.h"
@@ -43,7 +45,7 @@ trx_rseg_t *trx_rseg_get_on_id(ulint id) {
 
 page_no_t trx_rseg_header_create(space_id_t space, ulint max_size, ulint *slot_no, mtr_t *mtr) {
   ut_ad(mutex_own(&kernel_mutex));
-  ut_ad(mtr->memo_contains(srv_fil->space_get_latch(space), MTR_MEMO_X_LOCK));
+  ut_ad(mtr->memo_contains(state.srv_fil->space_get_latch(space), MTR_MEMO_X_LOCK));
 
   auto sys_header = srv_trx_sys->read_header(mtr);
 

@@ -677,7 +677,7 @@ void InnoDB::var_init() noexcept {
 
   srv_log_buffer_size = ULINT_MAX;
 
-  srv_data_read = 0;
+  state.srv_data_read = 0;
 
   srv_data_written = 0;
 
@@ -1299,7 +1299,7 @@ bool InnoDB::printf_innodb_monitor(
     "--------\n"
   );
 
-  log_warn("{}", srv_aio->to_string().c_str());
+  log_warn("{}", state.srv_aio->to_string().c_str());
 
   /* Only if lock_print_info_summary proceeds correctly,
   before we call the lock_print_info_all_transactions
@@ -1347,7 +1347,7 @@ bool InnoDB::printf_innodb_monitor(
 
   log_warn(std::format("{} read views open inside InnoDB", UT_LIST_GET_LEN(srv_trx_sys->m_view_list)));
 
-  auto n_reserved = srv_fil->space_get_n_reserved_extents(0);
+  auto n_reserved = state.srv_fil->space_get_n_reserved_extents(0);
 
   if (n_reserved > 0) {
     log_warn(std::format(
@@ -1405,9 +1405,9 @@ void InnoDB::export_innodb_status() noexcept {
 
   export_vars.innodb_data_pending_reads = state.os_n_pending_reads;
   export_vars.innodb_data_pending_writes = state.os_n_pending_writes;
-  export_vars.innodb_data_pending_fsyncs = srv_fil->get_pending_log_flushes() + srv_fil->get_pending_tablespace_flushes();
+  export_vars.innodb_data_pending_fsyncs = state.srv_fil->get_pending_log_flushes() + state.srv_fil->get_pending_tablespace_flushes();
   export_vars.innodb_data_fsyncs = state.os_n_fsyncs;
-  export_vars.innodb_data_read = srv_data_read;
+  export_vars.innodb_data_read = state.srv_data_read;
   export_vars.innodb_data_reads = state.os_n_file_reads;
   export_vars.innodb_data_writes = state.os_n_file_writes;
   export_vars.innodb_data_written = srv_data_written;
@@ -1433,8 +1433,8 @@ void InnoDB::export_innodb_status() noexcept {
   export_vars.innodb_page_size = UNIV_PAGE_SIZE;
   export_vars.innodb_log_waits = srv_log_waits;
   export_vars.innodb_os_log_written = srv_os_log_written;
-  export_vars.innodb_os_log_fsyncs = srv_fil->get_log_flushes();
-  export_vars.innodb_os_log_pending_fsyncs = srv_fil->get_pending_log_flushes();
+  export_vars.innodb_os_log_fsyncs = state.srv_fil->get_log_flushes();
+  export_vars.innodb_os_log_pending_fsyncs = state.srv_fil->get_pending_log_flushes();
   export_vars.innodb_os_log_pending_writes = srv_os_log_pending_writes;
   export_vars.innodb_log_write_requests = srv_log_write_requests;
   export_vars.innodb_log_writes = srv_log_writes;

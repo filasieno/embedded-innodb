@@ -24,6 +24,8 @@ Created 2/2/1994 Heikki Tuuri
 
 #include "page0page.h"
 
+#include <srv0state.h>
+
 #include "btr0btr.h"
 
 #include "buf0buf.h"
@@ -219,7 +221,7 @@ page_t *page_create(const Index *index, Buf_block *block, mtr_t *mtr) {
 
   auto page = block->get_frame();
 
-  srv_fil->page_set_type(page, FIL_PAGE_TYPE_INDEX);
+  state.srv_fil->page_set_type(page, FIL_PAGE_TYPE_INDEX);
 
   auto heap = mem_heap_create(200);
 

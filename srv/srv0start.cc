@@ -31,7 +31,7 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 *****************************************************************************/
 
-/** @file srv/srv0start.c
+/** @file srv/srv0start.cc
 Starts the InnoDB database server
 
 Created 2/16/1996 Heikki Tuuri
@@ -144,7 +144,7 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
 void *io_handler_thread(void *arg) {
   auto segment = *((ulint *)arg);
 
-  while (srv_fil->aio_wait(segment)) { }
+  while (state.srv_fil->aio_wait(segment)) { }
 
   /* We count the number of threads in os_thread_exit(). A created
   thread should always use that to exit and not use return() to exit.
@@ -192,7 +192,7 @@ static db_err create_log_file(const std::string &filename) noexcept {
     log_err(std::format("Can't create {}: probably out of disk space", filename));
     return DB_ERROR;
   } else {
-    srv_fil->node_create(filename.c_str(), srv_config.m_log_file_size, SRV_LOG_SPACE_FIRST_ID, false);
+    state.srv_fil->node_create(filename.c_str(), srv_config.m_log_file_size, SRV_LOG_SPACE_FIRST_ID, false);
     return DB_SUCCESS;
   }
 
@@ -234,7 +234,7 @@ static db_err open_log_file(const std::string &filename) noexcept {
   success = os_file_close(fh);
   ut_a(success);
 
-  srv_fil->node_create(filename.c_str(), srv_config.m_log_file_size, SRV_LOG_SPACE_FIRST_ID, false);
+  state.srv_fil->node_create(filename.c_str(), srv_config.m_log_file_size, SRV_LOG_SPACE_FIRST_ID, false);
 
   return DB_SUCCESS;
 }
@@ -327,7 +327,7 @@ static db_err open_system_tablespace(const std::string &path, lsn_t &flushed_lsn
   /* Convert to number of pages. */
   size /= UNIV_PAGE_SIZE;
 
-  srv_fil->read_flushed_lsn(fh, flushed_lsn);
+  state.srv_fil->read_flushed_lsn(fh, flushed_lsn);
 
   {
     auto success = os_file_close(fh);
@@ -335,12 +335,12 @@ static db_err open_system_tablespace(const std::string &path, lsn_t &flushed_lsn
   }
 
   {
-    auto success = srv_fil->space_create(filename.c_str(), SYS_TABLESPACE, 0, FIL_TABLESPACE);
+    auto success = state.srv_fil->space_create(filename.c_str(), SYS_TABLESPACE, 0, FIL_TABLESPACE);
     ut_a(success);
-    ut_a(srv_fil->validate());
+    ut_a(state.srv_fil->validate());
   }
 
-  srv_fil->node_create(filename.c_str(), size, 0, false);
+  state.srv_fil->node_create(filename.c_str(), size, 0, false);
 
   return DB_SUCCESS;
 }
@@ -364,7 +364,7 @@ static void srv_startup_abort(db_err err) noexcept {
       srv_prepare_for_shutdown(srv_config.m_force_recovery, srv_config.m_fast_shutdown);
     }
 
-    srv_fil->close_all_files();
+    state.srv_fil->close_all_files();
   }
 
   srv_threads_shutdown();
@@ -373,16 +373,16 @@ static void srv_startup_abort(db_err err) noexcept {
 
   srv_buf_pool->close();
 
-  srv_aio->shutdown();
+  state.srv_aio->shutdown();
 
-  delete srv_fil;
-  srv_fil = nullptr;
+  delete state.srv_fil;
+  state.srv_fil = nullptr;
 
   os_file_free();
 
   Log::destroy(state.log_sys);
 
-  AIO::destroy(srv_aio);
+  AIO::destroy(state.srv_aio);
 
   delete srv_buf_pool;
 }
@@ -470,20 +470,20 @@ ib_err_t InnoDB::start() noexcept {
 
   os_file_init();
 
-  srv_aio = AIO::create(io_limit, srv_config.m_n_read_io_threads, srv_config.m_n_write_io_threads);
+  state.srv_aio = AIO::create(io_limit, srv_config.m_n_read_io_threads, srv_config.m_n_write_io_threads);
 
-  if (srv_aio == nullptr) {
+  if (state.srv_aio == nullptr) {
     log_err("Failed to create an AIO instance.");
     os_file_free();
     return DB_OUT_OF_MEMORY;
   }
 
-  ut_a(srv_fil == nullptr);
+  ut_a(state.srv_fil == nullptr);
 
-  srv_fil = new (std::nothrow) Fil(srv_config.m_max_n_open_files);
+  state.srv_fil = new (std::nothrow) Fil(srv_config.m_max_n_open_files);
 
-  if (srv_fil == nullptr) {
-    AIO::destroy(srv_aio);
+  if (state.srv_fil == nullptr) {
+    AIO::destroy(state.srv_aio);
 
     os_file_free();
 
@@ -496,10 +496,10 @@ ib_err_t InnoDB::start() noexcept {
 
   if (!srv_buf_pool->open(srv_config.m_buf_pool_size)) {
     /* Shutdown all sub-systems that have been initialized. */
-    delete srv_fil;
-    srv_fil = nullptr;
+    delete state.srv_fil;
+    state.srv_fil = nullptr;
 
-    AIO::destroy(srv_aio);
+    AIO::destroy(state.srv_aio);
 
     os_file_free();
 
@@ -512,7 +512,7 @@ ib_err_t InnoDB::start() noexcept {
   state.log_sys = Log::create();
 
   ut_a(srv_fsp == nullptr);
-  srv_fsp = FSP::create(state.log_sys, srv_fil, srv_buf_pool);
+  srv_fsp = FSP::create(state.log_sys, state.srv_fil, srv_buf_pool);
 
   ut_a(srv_trx_sys == nullptr);
   srv_trx_sys = Trx_sys::create(srv_fsp);
@@ -583,9 +583,9 @@ ib_err_t InnoDB::start() noexcept {
 
   ut_a(srv_config.m_n_log_files >= 2);
 
-  auto success = srv_fil->space_create(log_dir.c_str(), SRV_LOG_SPACE_FIRST_ID, 0, FIL_LOG);
+  auto success = state.srv_fil->space_create(log_dir.c_str(), SRV_LOG_SPACE_FIRST_ID, 0, FIL_LOG);
   ut_a(success);
-  ut_a(srv_fil->validate());
+  ut_a(state.srv_fil->validate());
 
   for (ulint i{}; i < srv_config.m_n_log_files; ++i) {
     namespace fs = std::filesystem;
@@ -626,7 +626,7 @@ ib_err_t InnoDB::start() noexcept {
   /* Open all log files and the system tablespace: we keep them open
   until database shutdown */
 
-  srv_fil->open_log_and_system_tablespace();
+  state.srv_fil->open_log_and_system_tablespace();
 
   if (log_created && !create_new_db) {
     if (max_flushed_lsn < lsn_t(1000)) {
@@ -753,7 +753,7 @@ ib_err_t InnoDB::start() noexcept {
 
     std::pair<page_no_t, page_no_t> offsets{};
 
-    if (!DBLWR::check_if_exists(srv_fil, offsets)) {
+    if (!DBLWR::check_if_exists(state.srv_fil, offsets)) {
       err = srv_dblwr->initialize();
 
       if (err != DB_SUCCESS) {
@@ -769,7 +769,7 @@ ib_err_t InnoDB::start() noexcept {
 
     /* Recursively scan to a depth of 2. InnoDB needs to do this because the DD
     can't be accessed until recovery is done. So we have this simplistic scheme. */
-    if(srv_fil->load_single_table_tablespaces(srv_config.m_data_home, srv_config.m_force_recovery, 2) != DB_SUCCESS) {
+    if(state.srv_fil->load_single_table_tablespaces(srv_config.m_data_home, srv_config.m_force_recovery, 2) != DB_SUCCESS) {
       //TODO: Unhandled error case
       ut_error;
     }
@@ -923,7 +923,7 @@ static bool srv_threads_try_shutdown(Cond_var* lock_timeout_thread_event) noexce
   /* We wake the master thread so that it exits */
   InnoDB::wake_master_thread();
 
-  srv_aio->shutdown();
+  state.srv_aio->shutdown();
 
   if (os_thread_count.load(std::memory_order_relaxed) == 0) {
     /* All the threads have exited or are just exiting;
@@ -1073,8 +1073,8 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
 
     mutex_exit(&kernel_mutex);
 
-    srv_fil->flush_file_spaces(FIL_TABLESPACE);
-    srv_fil->flush_file_spaces(FIL_LOG);
+    state.srv_fil->flush_file_spaces(FIL_TABLESPACE);
+    state.srv_fil->flush_file_spaces(FIL_LOG);
 
     /* The call srv_fil->write_flushed_lsn_to_data_files() will pass the buffer
     pool: therefore it is essential that the buffer pool has been
@@ -1102,14 +1102,14 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
 
   srv_shutdown_lsn = lsn;
 
-  if (srv_fil->write_flushed_lsn_to_data_files(lsn) != DB_SUCCESS) {
+  if (state.srv_fil->write_flushed_lsn_to_data_files(lsn) != DB_SUCCESS) {
     //TODO: Unhadled error case
     ut_error;
   }
 
-  srv_fil->flush_file_spaces(FIL_TABLESPACE);
+  state.srv_fil->flush_file_spaces(FIL_TABLESPACE);
 
-  srv_fil->close_all_files();
+  state.srv_fil->close_all_files();
 
   /* Make some checks that the server really is quiet */
   ut_a(srv_n_threads_active[SRV_MASTER] == 0);
@@ -1175,14 +1175,14 @@ db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
 
   FSP::destroy(srv_fsp);
 
-  srv_aio->shutdown();
+  state.srv_aio->shutdown();
 
-  delete srv_fil;
-  srv_fil = nullptr;
+  delete state.srv_fil;
+  state.srv_fil = nullptr;
 
   InnoDB::free();
 
-  AIO::destroy(srv_aio);
+  AIO::destroy(state.srv_aio);
 
   /* 3. Free all InnoDB's own mutexes and the os_fast_mutexes inside them */
   sync_close();

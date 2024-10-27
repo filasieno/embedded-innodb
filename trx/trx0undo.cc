@@ -24,6 +24,8 @@ Created 3/26/1996 Heikki Tuuri
 
 #include "trx0undo.h"
 
+#include <srv0state.h>
+
 #include "fsp0fsp.h"
 #include "mach0data.h"
 #include "mtr0log.h"
@@ -192,7 +194,7 @@ void trx_undo_page_init(page_t *undo_page, ulint type, mtr_t *mtr) noexcept {
   mach_write_to_2(page_hdr + TRX_UNDO_PAGE_START, TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_HDR_SIZE);
   mach_write_to_2(page_hdr + TRX_UNDO_PAGE_FREE, TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_HDR_SIZE);
 
-  Fil::page_set_type(undo_page, FIL_PAGE_TYPE_UNDO_LOG);
+  state.srv_fil->page_set_type(undo_page, FIL_PAGE_TYPE_UNDO_LOG);
 
   trx_undo_page_init_log(undo_page, type, mtr);
 }
@@ -236,7 +238,7 @@ static db_err trx_undo_seg_create(trx_rseg_t *rseg __attribute__((unused)), trx_
   /* Allocate a new file segment for the undo log */
   auto block = srv_fsp->fseg_create_general(space, 0, TRX_UNDO_SEG_HDR + TRX_UNDO_FSEG_HEADER, true, mtr);
 
-  srv_fil->space_release_free_extents(space, n_reserved);
+  state.srv_fil->space_release_free_extents(space, n_reserved);
 
   if (block == nullptr) {
     /* No space left */

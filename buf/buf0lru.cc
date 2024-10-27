@@ -355,8 +355,8 @@ loop:
       "Starting InnoDB Monitor to print further\n"
       "diagnostics to the standard output.\n",
       n_iterations,
-      srv_fil->get_pending_log_flushes(),
-      srv_fil->get_pending_tablespace_flushes(),
+      state.srv_fil->get_pending_log_flushes(),
+      state.srv_fil->get_pending_tablespace_flushes(),
       state.os_n_file_reads,
       state.os_n_file_writes,
       state.os_n_fsyncs
@@ -957,19 +957,17 @@ void Buf_LRU::print() {
     }
 
     switch (bpage->get_state()) {
-
-      const byte *frame;
-
       case BUF_BLOCK_FILE_PAGE:
-        frame = reinterpret_cast<Buf_block *>(bpage)->get_frame();
-
-        ib_logger(
-          ib_stream, "\ntype %lu index id %lu\n", (ulong)srv_fil->page_get_type(frame), (ulong)srv_btree_sys->page_get_index_id(frame)
-        );
-        break;
+        {
+          const byte *frame = reinterpret_cast<Buf_block *>(bpage)->get_frame();
+          ib_logger(
+            ib_stream, "\ntype %d index id %lu\n", state.srv_fil->page_get_type(frame), srv_btree_sys->page_get_index_id(frame)
+          );
+          break;
+        }
 
       default:
-        ib_logger(ib_stream, "\n!state %lu!\n", (ulong)bpage->get_state());
+        ib_logger(ib_stream, "\n!state %d!\n", bpage->get_state());
         break;
     }
   }

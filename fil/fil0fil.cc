@@ -1516,12 +1516,7 @@ db_err Fil::create_new_single_table_tablespace(space_id_t *space_id, const char 
     return err_exit(path, file);
   }
 
-  ret = os_file_flush(file);
-
-  if (!ret) {
-    log_err(std::format("File flush of tablespace {} failed", path));
-    return err_exit(path, file);
-  }
+  os_file_flush(file);
 
   os_file_close(file);
 
@@ -2106,7 +2101,7 @@ bool Fil::extend_space_to_desired_size(page_no_t *actual_size, space_id_t space_
 
     IO_ctx io_ctx = {.m_batch = false, .m_fil_node = node, .m_msg = nullptr, .m_io_request = io_request};
 
-    success = srv_aio->submit(std::move(io_ctx), buf, page_size * n_pages, off);
+    success = state.srv_aio->submit(std::move(io_ctx), buf, page_size * n_pages, off);
 
     if (success) {
       node->m_size_in_pages += n_pages;
@@ -2277,7 +2272,7 @@ db_err Fil::io(
       is_sync_request = true;
       // falthrough
     case IO_request::Async_read:
-      srv_data_read += len;
+      state.srv_data_read += len;
       break;
 
     case IO_request::Sync_write:
@@ -2359,7 +2354,7 @@ db_err Fil::io(
   IO_ctx io_ctx = {.m_batch = batched, .m_fil_node = fil_node, .m_msg = message, .m_io_request = io_request};
 
   /* Queue the aio request */
-  auto err = srv_aio->submit(std::move(io_ctx), buf, len, off);
+  auto err = state.srv_aio->submit(std::move(io_ctx), buf, len, off);
   ut_a(err == DB_SUCCESS);
 
   if (is_sync_request) {
@@ -2382,7 +2377,7 @@ bool Fil::aio_wait(ulint segment) {
 
   IO_ctx io_ctx{};
 
-  auto err = srv_aio->reap(segment, io_ctx);
+  auto err = state.srv_aio->reap(segment, io_ctx);
 
   if (io_ctx.is_shutdown()) {
     return false;

@@ -361,16 +361,16 @@ void buf_page_print(const byte *read_buf, ulint) {
   ib_logger(ib_stream, "  Page dump in ascii and hex (%lu bytes):\n", (ulong)size);
   ib_logger(ib_stream, "\nEnd of page dump\n");
 
-  auto checksum =  buf_page_data_calc_checksum(read_buf);
+  const auto checksum =  buf_page_data_calc_checksum(read_buf);
 
   ib_logger(
     ib_stream,
-    " Checksum stored on page %lu, lsn %lu, %lu space id %lu, page number %lu",
-    (ulong)checksum,
-    (ulong)mach_read_from_4(read_buf + FIL_PAGE_SPACE_OR_CHKSUM),
-    (ulong)mach_read_from_4(read_buf + FIL_PAGE_LSN) | (ulong)mach_read_from_4(read_buf + FIL_PAGE_LSN + 4),
-    (ulong)mach_read_from_4(read_buf + FIL_PAGE_SPACE_ID),
-    (ulong)mach_read_from_4(read_buf + FIL_PAGE_OFFSET)
+    " Checksum stored on page %u, lsn %lu, %lu space id %lu, page number %lu",
+    checksum,
+    mach_read_from_4(read_buf + FIL_PAGE_SPACE_OR_CHKSUM),
+    mach_read_from_4(read_buf + FIL_PAGE_LSN) | (ulong)mach_read_from_4(read_buf + FIL_PAGE_LSN + 4),
+    mach_read_from_4(read_buf + FIL_PAGE_SPACE_ID),
+    mach_read_from_4(read_buf + FIL_PAGE_OFFSET)
   );
 
   if (mach_read_from_2(read_buf + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_TYPE) == TRX_UNDO_INSERT) {
@@ -379,7 +379,7 @@ void buf_page_print(const byte *read_buf, ulint) {
     ib_logger(ib_stream, "Page may be an update undo log page\n");
   }
 
-  switch (srv_fil->page_get_type(read_buf)) {
+  switch (state.srv_fil->page_get_type(read_buf)) {
     case FIL_PAGE_TYPE_INDEX:
       log_warn(std::format(
         "Page may be an index page where index id is {}",
@@ -1250,7 +1250,7 @@ Buf_page *Buf_pool::init_for_read(db_err *err, space_id_t space, page_no_t page_
       mutex_exit(&block->m_mutex);
     }
 
-  } else if (srv_fil->tablespace_deleted_or_being_deleted_in_mem(space, tablespace_version)) {
+  } else if (state.srv_fil->tablespace_deleted_or_being_deleted_in_mem(space, tablespace_version)) {
 
     /* The page belongs to a space which has been deleted or is being deleted. */
     *err = DB_TABLESPACE_DELETED;
@@ -1697,7 +1697,7 @@ void Buf_pool::print() {
     for (; n_blocks--; block++) {
       const buf_frame_t *frame = block->m_frame;
 
-      if (srv_fil->page_get_type(frame) == FIL_PAGE_TYPE_INDEX) {
+      if (state.srv_fil->page_get_type(frame) == FIL_PAGE_TYPE_INDEX) {
 
         id = srv_btree_sys->page_get_index_id(frame);
 
@@ -1797,46 +1797,43 @@ ulint Buf_pool::get_modified_ratio_pct() {
 }
 
 void Buf_pool::print_io(ib_stream_t ib_stream) {
-  time_t current_time;
-  double time_elapsed;
-  ulint n_gets_diff;
 
   mutex_acquire();
 
   log_info(
-    "Buffer pool size     ", (ulong)m_curr_size, "\n",
-    "Free buffers        ", (ulong)UT_LIST_GET_LEN(m_free_list),
+    "Buffer pool size     ", m_curr_size, "\n",
+    "Free buffers        ", UT_LIST_GET_LEN(m_free_list),
     "\n",
-    "Database pages      ", (ulong)m_LRU_old_len,
+    "Database pages      ", m_LRU_old_len,
     "\n",
-    "Old database pages  ", (ulong)UT_LIST_GET_LEN(m_LRU_list),
+    "Old database pages  ", UT_LIST_GET_LEN(m_LRU_list),
     "\n"
-    "Modified db pages   ", (ulong)UT_LIST_GET_LEN(m_flush_list),
+    "Modified db pages   ", UT_LIST_GET_LEN(m_flush_list),
     "\n"
-    "Pending reads       ", (ulong)m_n_pend_reads,
+    "Pending reads       ", m_n_pend_reads,
     "\n"
-    "Pending writes: LRU ", (ulong)m_n_flush[BUF_FLUSH_LRU] + m_init_flush[BUF_FLUSH_LRU],
-    ", flush list ", (ulong)m_n_flush[BUF_FLUSH_LIST] + m_init_flush[BUF_FLUSH_LIST],
-    ", single page ", (ulong)m_n_flush[BUF_FLUSH_SINGLE_PAGE]
+    "Pending writes: LRU ", m_n_flush[BUF_FLUSH_LRU] + m_init_flush[BUF_FLUSH_LRU],
+    ", flush list ", m_n_flush[BUF_FLUSH_LIST] + m_init_flush[BUF_FLUSH_LIST],
+    ", single page ", m_n_flush[BUF_FLUSH_SINGLE_PAGE]
   );
 
-  current_time = time(nullptr);
-  time_elapsed = 0.001 + difftime(current_time, m_last_printout_time);
+  const time_t current_time = time(nullptr);
+  const double time_elapsed = 0.001 + difftime(current_time, m_last_printout_time);
 
   log_info(
     ib_stream,
-    "Pages made young ", (ulong)m_stat.n_pages_made_young,
-    ", not young ", (ulong)m_stat.n_pages_not_made_young,
+    "Pages made young ", m_stat.n_pages_made_young,
+    ", not young ", m_stat.n_pages_not_made_young,
     "\n",
     (m_stat.n_pages_made_young - m_old_stat.n_pages_made_young) / time_elapsed,
     " youngs/s, ",
     (m_stat.n_pages_not_made_young - m_old_stat.n_pages_not_made_young) / time_elapsed,
     " non-youngs/s\n",
-    "Pages read ", (ulong)m_stat.n_pages_read,
+    "Pages read ", m_stat.n_pages_read,
     ",",
-    " created", (ulong)m_stat.n_pages_created,
+    " created", m_stat.n_pages_created,
     ","
-    " written ", (ulong)m_stat.n_pages_written,
+    " written ", m_stat.n_pages_written,
     "\n",
     (m_stat.n_pages_read - m_old_stat.n_pages_read) / time_elapsed,
     " reads/s, ",
@@ -1846,19 +1843,16 @@ void Buf_pool::print_io(ib_stream_t ib_stream) {
     " writes/s"
   );
 
-  n_gets_diff = m_stat.n_page_gets - m_old_stat.n_page_gets;
-
-  if (n_gets_diff) {
+  if (const ulint n_gets_diff = m_stat.n_page_gets - m_old_stat.n_page_gets) {
     log_info(
       "Buffer pool hit rate ",
-      (ulong)(1000 - ((1000 * (m_stat.n_pages_read - m_old_stat.n_pages_read)) /
-                      (m_stat.n_page_gets - m_old_stat.n_page_gets))),
+      1000 - 1000 * (m_stat.n_pages_read - m_old_stat.n_pages_read) / (m_stat.n_page_gets - m_old_stat.n_page_gets),
       "/ 1000,",
       " young-making rate ",
-      (ulong)(1000 * (m_stat.n_pages_made_young - m_old_stat.n_pages_made_young) / n_gets_diff),
+      1000 * (m_stat.n_pages_made_young - m_old_stat.n_pages_made_young) / n_gets_diff,
       "/ 1000",
       " not ",
-      (ulong)(1000 * (m_stat.n_pages_not_made_young - m_old_stat.n_pages_not_made_young) / n_gets_diff),
+      1000 * (m_stat.n_pages_not_made_young - m_old_stat.n_pages_not_made_young) / n_gets_diff,
       "/ 1000"
     );
   } else {
@@ -1896,10 +1890,12 @@ bool Buf_pool::all_freed() {
 
   for (ulint i = m_n_chunks; i--; chunk++) {
 
-    const auto block = chunk_not_freed(chunk);
-
-    if (block != nullptr) {
-      ib_logger(ib_stream, "Page %lu %lu still fixed or dirty\n", (ulong)block->m_page.m_space, (ulong)block->m_page.m_page_no);
+    if (const auto block = chunk_not_freed(chunk); block != nullptr) {
+      ib_logger(ib_stream,
+        "Page %lu %lu still fixed or dirty\n",
+        static_cast<ulong>(block->m_page.m_space),
+        static_cast<ulong>(block->m_page.m_page_no)
+      );
       ut_error;
     }
   }
@@ -1912,7 +1908,7 @@ bool Buf_pool::all_freed() {
 bool Buf_pool::is_io_pending() {
   mutex_acquire();
 
-  auto ret = m_n_pend_reads + m_n_flush[BUF_FLUSH_LRU] + m_n_flush[BUF_FLUSH_LIST] + m_n_flush[BUF_FLUSH_SINGLE_PAGE] > 0;
+  const auto ret = m_n_pend_reads + m_n_flush[BUF_FLUSH_LRU] + m_n_flush[BUF_FLUSH_LIST] + m_n_flush[BUF_FLUSH_SINGLE_PAGE] > 0;
 
   mutex_release();
 
@@ -1933,7 +1929,7 @@ ulint Buf_pool::get_free_list_len() {
 Buf_page *Buf_pool::set_file_page_was_freed(space_id_t space, page_no_t page_no) {
   mutex_acquire();
 
-  auto bpage = hash_get_page(space, page_no);
+  const auto bpage = hash_get_page(space, page_no);
 
   if (bpage != nullptr) {
     bpage->m_file_page_was_freed = true;

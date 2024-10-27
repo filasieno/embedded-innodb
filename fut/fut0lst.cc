@@ -26,6 +26,7 @@ Created 11/28/1995 Heikki Tuuri
 
 #include "buf0buf.h"
 #include "page0page.h"
+#include "srv0state.h"
 
 /**
  * @brief Adds a node to an empty list.
@@ -152,7 +153,7 @@ void flst_insert_after(flst_base_node_t *base, flst_node_t *node1, flst_node_t *
   flst_write_addr(node2 + FLST_PREV, node1_addr, mtr);
   flst_write_addr(node2 + FLST_NEXT, node3_addr, mtr);
 
-  if (!srv_fil->addr_is_null(node3_addr)) {
+  if (!state.srv_fil->addr_is_null(node3_addr)) {
     /* Update prev field of node3 */
     node3 = fut_get_ptr(space, node3_addr, RW_X_LATCH, mtr);
     flst_write_addr(node3 + FLST_PREV, node2_addr, mtr);
@@ -194,7 +195,7 @@ void flst_insert_before(flst_base_node_t *base, flst_node_t *node2, flst_node_t 
   flst_write_addr(node2 + FLST_PREV, node1_addr, mtr);
   flst_write_addr(node2 + FLST_NEXT, node3_addr, mtr);
 
-  if (!srv_fil->addr_is_null(node1_addr)) {
+  if (!state.srv_fil->addr_is_null(node1_addr)) {
     /* Update next field of node1 */
     node1 = fut_get_ptr(space, node1_addr, RW_X_LATCH, mtr);
     flst_write_addr(node1 + FLST_NEXT, node2_addr, mtr);
@@ -227,7 +228,7 @@ void flst_remove(flst_base_node_t *base, flst_node_t *node2, mtr_t *mtr) {
   auto node1_addr = flst_get_prev_addr(node2, mtr);
   auto node3_addr = flst_get_next_addr(node2, mtr);
 
-  if (!srv_fil->addr_is_null(node1_addr)) {
+  if (!state.srv_fil->addr_is_null(node1_addr)) {
 
     /* Update next field of node1 */
 
@@ -246,7 +247,7 @@ void flst_remove(flst_base_node_t *base, flst_node_t *node2, mtr_t *mtr) {
     flst_write_addr(base + FLST_FIRST, node3_addr, mtr);
   }
 
-  if (!srv_fil->addr_is_null(node3_addr)) {
+  if (!state.srv_fil->addr_is_null(node3_addr)) {
     /* Update prev field of node3 */
 
     if (node3_addr.m_page_no == node2_addr.m_page_no) {
@@ -286,7 +287,7 @@ void flst_cut_end(flst_base_node_t *base, flst_node_t *node2, ulint n_nodes, mtr
 
   auto node1_addr = flst_get_prev_addr(node2, mtr);
 
-  if (!srv_fil->addr_is_null(node1_addr)) {
+  if (!state.srv_fil->addr_is_null(node1_addr)) {
 
     /* Update next field of node1 */
 
@@ -318,7 +319,7 @@ void flst_truncate_end(flst_base_node_t *base, flst_node_t *node2, ulint n_nodes
 
   if (n_nodes == 0) {
 
-    ut_ad(srv_fil->addr_is_null(flst_get_next_addr(node2, mtr)));
+    ut_ad(state.srv_fil->addr_is_null(flst_get_next_addr(node2, mtr)));
 
     return;
   }
@@ -371,7 +372,7 @@ bool flst_validate(const flst_base_node_t *base, mtr_t *mtr1) {
     mtr2.commit();
   }
 
-  ut_a(srv_fil->addr_is_null(node_addr));
+  ut_a(state.srv_fil->addr_is_null(node_addr));
 
   node_addr = flst_get_last(base, mtr1);
 
@@ -387,7 +388,7 @@ bool flst_validate(const flst_base_node_t *base, mtr_t *mtr1) {
     mtr2.commit();
   }
 
-  ut_a(srv_fil->addr_is_null(node_addr));
+  ut_a(state.srv_fil->addr_is_null(node_addr));
 
   return true;
 }

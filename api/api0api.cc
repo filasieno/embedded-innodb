@@ -3917,7 +3917,7 @@ bool ib_database_create(const char *dbname) {
 
   /* Only necessary if file per table is set. */
   if (srv_config.m_file_per_table) {
-    return srv_fil->mkdir(dbname);
+    return state.srv_fil->mkdir(dbname);
   }
 
   return true;
@@ -3950,7 +3950,7 @@ ib_err_t ib_database_drop(const char *dbname) {
 
   /* Only necessary if file per table is set. */
   if (err == DB_SUCCESS && srv_config.m_file_per_table) {
-    if (srv_fil->rmdir(ptr)) {
+    if (state.srv_fil->rmdir(ptr)) {
       //TODO: Unhandled case
       ut_error;
     }

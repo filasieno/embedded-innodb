@@ -343,7 +343,7 @@ log buffer and have to flush it */
 extern ulint srv_log_waits;
 
 /* variable that counts amount of data read in total (in bytes) */
-extern ulint srv_data_read;
+// extern ulint srv_data_read;
 
 /* here we count the amount of data written in total (in bytes) */
 extern ulint srv_data_written;
@@ -732,7 +732,6 @@ struct Export_vars {
   ulint innodb_rows_deleted;                   
 };
 
-struct Fil;
 struct FSP;
 struct Undo;
 struct Btree;
@@ -746,9 +745,7 @@ struct Row_insert;
 
 extern Undo *srv_undo;
 
-extern Fil *srv_fil;
-
-extern AIO *srv_aio;
+// extern AIO *srv_aio;
 
 extern FSP *srv_fsp;
 

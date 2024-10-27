@@ -321,12 +321,10 @@ void Buf_flush::write_complete(Buf_page *bpage) {
 
 void Buf_flush::sync_datafiles() {
   /* Wait until all pending async writes are completed */
-  srv_aio->wait_for_pending_ops(aio::WRITE);
+  state.srv_aio->wait_for_pending_ops(aio::WRITE);
 
   /* Now we flush the data to disk (for example, with fsync) */
-  srv_fil->flush_file_spaces(FIL_TABLESPACE);
-
-  return;
+  state.srv_fil->flush_file_spaces(FIL_TABLESPACE);
 }
 
 void Buf_flush::buffered_writes(DBLWR *dblwr) {
@@ -392,7 +390,7 @@ void Buf_flush::buffered_writes(DBLWR *dblwr) {
 
   ulint i{};
 
-  if (srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block1, 0, len, write_buf, nullptr) != DB_SUCCESS) {
+  if (state.srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block1, 0, len, write_buf, nullptr) != DB_SUCCESS) {
     //TODO: Unhandled error case
     ut_error;
   }
@@ -421,7 +419,7 @@ void Buf_flush::buffered_writes(DBLWR *dblwr) {
   write_buf = dblwr->m_write_buf + SYS_DOUBLEWRITE_BLOCK_SIZE * UNIV_PAGE_SIZE;
   ut_ad(i == SYS_DOUBLEWRITE_BLOCK_SIZE);
 
-  if(srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block2, 0, len, (void *)write_buf, nullptr) != DB_SUCCESS) {
+  if(state.srv_fil->io(IO_request::Sync_write, false, TRX_SYS_SPACE, dblwr->m_block2, 0, len, (void *)write_buf, nullptr) != DB_SUCCESS) {
     //TODO: Unhandled error case
     ut_error;
   }
@@ -441,7 +439,7 @@ void Buf_flush::buffered_writes(DBLWR *dblwr) {
 flush:
   /* Now flush the doublewrite buffer data to disk */
 
-  srv_fil->flush(TRX_SYS_SPACE);
+  state.srv_fil->flush(TRX_SYS_SPACE);
 
   /* We know that the writes have been flushed to disk now
   and in recovery we will find them in the doublewrite buffer
@@ -464,7 +462,7 @@ flush:
       ));
     }
 
-    if (srv_fil->io(
+    if (state.srv_fil->io(
       IO_request::Async_write,
       true,
       block->get_space(),
@@ -574,7 +572,7 @@ void Buf_flush::write_block_low(DBLWR *dblwr, Buf_page *bpage) {
   }
 
   if (!srv_config.m_use_doublewrite_buf || dblwr == nullptr) {
-    if (srv_fil->io(IO_request::Async_write, true, bpage->get_space(), bpage->get_page_no(), 0, UNIV_PAGE_SIZE, frame, bpage) != DB_SUCCESS) {
+    if (state.srv_fil->io(IO_request::Async_write, true, bpage->get_space(), bpage->get_page_no(), 0, UNIV_PAGE_SIZE, frame, bpage) != DB_SUCCESS) {
       //TODO: Unhandled error case
       ut_error;
     }
@@ -590,7 +588,7 @@ inline static bool free_page_if_truncated(Buf_pool *buf_pool, Buf_page *bpage) {
   ut_ad(mutex_own(buf_page_get_mutex(bpage)));
 
   auto space = bpage->get_space();
-  bool table_truncated = srv_fil->tablespace_deleted_or_being_deleted_in_mem(space, -1);
+  bool table_truncated = state.srv_fil->tablespace_deleted_or_being_deleted_in_mem(space, -1);
 
   bool page_from_flush_list = bpage->m_oldest_modification != 0;
 
@@ -714,8 +712,8 @@ ulint Buf_flush::try_neighbors(DBLWR* dblwr, space_id_t space, page_no_t page_no
 
   /* ib_logger(ib_stream, "Flush area: low %lu high %lu\n", low, high); */
 
-  if (high > srv_fil->space_get_size(space)) {
-    high = srv_fil->space_get_size(space);
+  if (high > state.srv_fil->space_get_size(space)) {
+    high = state.srv_fil->space_get_size(space);
   }
 
   m_buf_pool->mutex_acquire();

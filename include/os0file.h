@@ -287,11 +287,11 @@ bool os_file_set_eof(FILE *file);
 
 /**
  * @brief Flushes the write buffers of a given file to the disk.
+ * if a flush on a file fails it is a fatal error.
  *
  * @param file Handle to a file.
- * @return True if success.
  */
-bool os_file_flush(os_file_t file);
+void os_file_flush(os_file_t file);
 
 /**
  * @brief Retrieves the last error number if an error occurs in a file io function.
