@@ -149,7 +149,7 @@ FILE *os_file_create_tmpfile();
  * @param fail_if_exists  [in] If true, pre-existing directory is treated as an error.
  * @return true if call succeeds, false on error.
  */
-bool os_file_create_directory(const char *pathname, bool fail_if_exists);
+[[nodiscard]] bool os_file_create_directory(const char *pathname, bool fail_if_exists);
 
 /**
  * @brief A simple function to open or create a file.
@@ -165,7 +165,7 @@ bool os_file_create_directory(const char *pathname, bool fail_if_exists);
  * @return os_file_t    Own handle to the file, not defined if error, error number can be
  *                      retrieved with os_file_get_last_error.
  */
-os_file_t os_file_create_simple(const char *name, ulint create_mode, ulint access_type, bool *success); 
+[[nodiscard]] os_file_t os_file_create_simple(const char *name, ulint create_mode, ulint access_type, bool *success);
 
 /**
  * @brief A simple function to open or create a file.
@@ -179,7 +179,7 @@ os_file_t os_file_create_simple(const char *name, ulint create_mode, ulint acces
  * @return os_file_t    Own handle to the file, not defined if error, error number can be
  *                      retrieved with os_file_get_last_error.
  */
-os_file_t os_file_create_simple_no_error_handling(
+[[nodiscard]] os_file_t os_file_create_simple_no_error_handling(
   const char *name,
   ulint create_mode,
   ulint access_type,
@@ -213,7 +213,7 @@ void os_file_set_nocache(int fd, const char *file_name, const char *operation_na
  * @return os_file_t    Own handle to the file, not defined if error, error number can be
  *                      retrieved with os_file_get_last_error.
  */
-os_file_t os_file_create(const char *name, ulint create_mode, ulint purpose, ulint type, bool *success);
+[[nodiscard]] os_file_t os_file_create(const char *name, ulint create_mode, ulint purpose, ulint type, bool *success);
 
 /**
  * @brief Deletes a file. The file has to be closed before calling this.

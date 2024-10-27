@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include <strings.h>
 #endif /** HAVE_STRINGS_H */
 
+#include <srv0state.h>
+
 #include "buf0lru.h"
 #include "db0err.h"
 #include "dict0dict.h"
@@ -814,7 +816,7 @@ static ib_err_t ib_cfg_set_ap(const char *name, va_list ap) {
 
     /* check whether setting the variable is appropriate,
     according to its flag */
-    if (cfg_var->flag & IB_CFG_FLAG_READONLY || (cfg_var->flag & IB_CFG_FLAG_READONLY_AFTER_STARTUP && srv_was_started)) {
+    if (cfg_var->flag & IB_CFG_FLAG_READONLY || (cfg_var->flag & IB_CFG_FLAG_READONLY_AFTER_STARTUP && state.srv_was_started)) {
 
       ret = DB_READONLY;
     } else {

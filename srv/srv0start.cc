@@ -83,6 +83,8 @@ Created 2/16/1996 Heikki Tuuri
 #include <unistd.h>
 #endif
 
+#include <srv0state.h>
+
 #include <filesystem>
 
 /** System tablespace initial size.  */
@@ -103,9 +105,6 @@ bool srv_startup_is_before_trx_rollback_phase = false;
 
 /** true if the server is being started */
 bool srv_is_being_started = false;
-
-/** true if the server was successfully started */
-bool srv_was_started = false;
 
 /** At a shutdown this value climbs from SRV_SHUTDOWN_NONE to
 SRV_SHUTDOWN_CLEANUP and then to SRV_SHUTDOWN_LAST_PHASE, and so on */
@@ -386,7 +385,7 @@ static void srv_startup_abort(db_err err) noexcept {
 }
 
 ib_err_t InnoDB::start() noexcept {
-  ut_a(!srv_was_started);
+  ut_a(!state.srv_was_started);
 
   // FIXME:
   ib_stream = stderr;
@@ -898,7 +897,7 @@ ib_err_t InnoDB::start() noexcept {
     log_warn(std::format("!!! force_recovery is set to {} !!!", (int) srv_config.m_force_recovery));
   }
 
-  srv_was_started = true;
+  state.srv_was_started = true;
 
   return DB_SUCCESS;
 }
@@ -1110,7 +1109,7 @@ static void srv_prepare_for_shutdown(ib_recovery_t recovery, ib_shutdown_t shutd
 }
 
 db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
-  ut_a(srv_was_started);
+  ut_a(state.srv_was_started);
 
   /* This is currently required to inform the master thread only. Once
   we have contexts we can get rid of this global. */
@@ -1213,7 +1212,7 @@ db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
 
   log_info("Shutdown completed; log sequence number ", srv_shutdown_lsn);
 
-  srv_was_started = false;
+  state.srv_was_started = false;
 
   InnoDB::modules_var_init();
   InnoDB::var_init();

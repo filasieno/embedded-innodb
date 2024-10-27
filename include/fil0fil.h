@@ -26,7 +26,6 @@ Created 10/25/1995 Heikki Tuuri
 
 #include "innodb0types.h"
 
-#include "dict0types.h"
 #include "fil0types.h"
 #include "mtr0types.h"
 #include "os0aio.h"

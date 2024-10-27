@@ -32,11 +32,19 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 #define SRV0STATE_H
 
 #include <innodb0types.h>
+#include <atomic>
 
 /// Define a single InnoDB global state type.
 /// The type holds defines the state of a single instace of the InnoDB.
 /// All fields will be prefixed to highlight the module the defines it.
 struct InnoDB_state {
+  /// @name General InnoDB Server state variables
+  /// @{
+
+  /// true if the server was successfully started
+  bool srv_was_started{false};
+
+  /// @}
 
   /// @name OS InnoDB state variables
   /// @{
