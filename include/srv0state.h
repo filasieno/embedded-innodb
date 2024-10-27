@@ -139,14 +139,19 @@ struct Config {
   ulong m_max_purge_lag{0};
 };
 
-/// Define a single InnoDB global state type.
+/// @brief Define a single InnoDB global state type.
+///
 /// The type holds defines the state of a single instace of the InnoDB.
 /// All fields will be prefixed to highlight the module the defines it.
+///
 struct InnoDB_state {
   /// @name General InnoDB Server state variables
   /// @{
 
   Config srv_config;
+
+  /// true if the server is being started
+  bool srv_is_being_started{false};
 
   /// true if the server was successfully started
   bool srv_was_started{false};

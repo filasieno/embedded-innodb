@@ -88,8 +88,7 @@ bool srv_start_raw_disk_in_use = false;
 incomplete transactions */
 bool srv_startup_is_before_trx_rollback_phase = false;
 
-/** true if the server is being started */
-bool srv_is_being_started = false;
+
 
 /** At a shutdown this value climbs from SRV_SHUTDOWN_NONE to
 SRV_SHUTDOWN_CLEANUP and then to SRV_SHUTDOWN_LAST_PHASE, and so on */
@@ -395,7 +394,7 @@ ib_err_t InnoDB::start() noexcept {
 
   /*	yydebug = true; */
 
-  srv_is_being_started = true;
+  state.srv_is_being_started = true;
 
   srv_startup_is_before_trx_rollback_phase = true;
 
@@ -853,7 +852,7 @@ ib_err_t InnoDB::start() noexcept {
   /* Create the thread which prints InnoDB monitor info */
   os_thread_create(&InnoDB::monitor_thread, nullptr, &thread_ids[4 + SRV_MAX_N_IO_THREADS]);
 
-  srv_is_being_started = false;
+  state.srv_is_being_started = false;
 
   ut_a(err == DB_SUCCESS);
   err = srv_dict_sys->m_store.create_or_check_foreign_constraint_tables();
