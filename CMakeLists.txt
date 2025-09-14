@@ -32,6 +32,17 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
 
+# Ensure that the required dependecies are available
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(BS_THREAD_POOL REQUIRED bs-thread-pool)
+pkg_check_modules(LIBURING       REQUIRED liburing)
+
+# OptionalL if available use `ccache`
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
 
 # ---------------------------------------------------------------------------------------------------------------------
 # end General configuration
@@ -101,17 +112,9 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${VALID_BUILD_TYPES})
 endif()
 
-# ccache
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-  set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
-  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-endif()
 
-# Dependencies via pkg-config
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(BS_THREAD_POOL REQUIRED bs-thread-pool)
-pkg_check_modules(LIBURING REQUIRED liburing)
+
+
 
 # Platform defines
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -391,9 +394,9 @@ set(UNIT_TEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/innodb/tests)
 # =====================================================================================================================
 # Integration tests configuration
 # =====================================================================================================================
+set(INTEGRATION_TEST_LIBS              pthread m)
 set(INTEGRATION_TEST_ROOT_DIR          "${CMAKE_SOURCE_DIR}/innodb/tests")
 set(INTEGRATION_TEST_SOURCE_DIR        "${INTEGRATION_TEST_ROOT_DIR}/src")
-set(INTEGRATION_TEST_LIBS              pthread m)
 set(INTEGRATION_TEST_COMMON_INCLUDES   "${CMAKE_SOURCE_DIR}/innodb/include"
                                        "${CMAKE_SOURCE_DIR}/innodb/src/include"
                                        "${CMAKE_BINARY_DIR}/include"
@@ -415,29 +418,29 @@ function(innodb_integration_test executable_name main_src_file)
   set_target_properties(${executable_name} PROPERTIES FOLDER "integration_tests")
 endfunction()
 
-innodb_integration_test(itest_ib_cfg               ib_cfg.cc             )
-innodb_integration_test(itest_ib_cursor            ib_cursor.cc          )
-innodb_integration_test(itest_ib_ddl               ib_ddl.cc             )
-innodb_integration_test(itest_ib_dict              ib_dict.cc            )
-innodb_integration_test(itest_ib_dict-2            ib_dict-2.cc          )
-innodb_integration_test(itest_ib_drop              ib_drop.cc            )
-innodb_integration_test(itest_ib_index             ib_index.cc           )
-innodb_integration_test(itest_ib_logger            ib_logger.cc          )
-innodb_integration_test(itest_ib_recover           ib_recover.cc         )
-innodb_integration_test(itest_ib_shutdown          ib_shutdown.cc        )
-innodb_integration_test(itest_ib_status            ib_status.cc          )
-innodb_integration_test(itest_ib_tablename         ib_tablename.cc       )
-innodb_integration_test(itest_ib_test1             ib_test1.cc           )
-innodb_integration_test(itest_ib_test2             ib_test2.cc           )
-innodb_integration_test(itest_ib_test3             ib_test3.cc           )
-innodb_integration_test(itest_ib_test5             ib_test5.cc           )
-innodb_integration_test(itest_ib_types             ib_types.cc           )
-innodb_integration_test(itest_ib_update            ib_update.cc          )
-innodb_integration_test(itest_ib_search            ib_search.cc          )
-innodb_integration_test(itest_ib_parallel_reader   ib_parallel_reader.cc )
-innodb_integration_test(itest_ib_deadlock          ib_deadlock.cc        )
-innodb_integration_test(itest_ib_mt_stress         ib_mt_stress.cc       )
-innodb_integration_test(itest_ib_perf1             ib_perf1.cc           )
+innodb_integration_test(itest_cfg               ib_cfg.cc             )
+innodb_integration_test(itest_cursor            ib_cursor.cc          )
+innodb_integration_test(itest_ddl               ib_ddl.cc             )
+innodb_integration_test(itest_dict              ib_dict.cc            )
+innodb_integration_test(itest_dict-2            ib_dict-2.cc          )
+innodb_integration_test(itest_drop              ib_drop.cc            )
+innodb_integration_test(itest_index             ib_index.cc           )
+innodb_integration_test(itest_logger            ib_logger.cc          )
+innodb_integration_test(itest_recover           ib_recover.cc         )
+innodb_integration_test(itest_shutdown          ib_shutdown.cc        )
+innodb_integration_test(itest_status            ib_status.cc          )
+innodb_integration_test(itest_tablename         ib_tablename.cc       )
+innodb_integration_test(itest_test1             ib_test1.cc           )
+innodb_integration_test(itest_test2             ib_test2.cc           )
+innodb_integration_test(itest_test3             ib_test3.cc           )
+innodb_integration_test(itest_test5             ib_test5.cc           )
+innodb_integration_test(itest_types             ib_types.cc           )
+innodb_integration_test(itest_update            ib_update.cc          )
+innodb_integration_test(itest_search            ib_search.cc          )
+innodb_integration_test(itest_parallel_reader   ib_parallel_reader.cc )
+innodb_integration_test(itest_deadlock          ib_deadlock.cc        )
+innodb_integration_test(itest_mt_stress         ib_mt_stress.cc       )
+innodb_integration_test(itest_perf1             ib_perf1.cc           )
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Integration testsconfiguration
