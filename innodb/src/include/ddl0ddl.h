@@ -150,7 +150,7 @@ struct DDL {
   void drop_all_temp_tables(ib_recovery_t recovery) noexcept;
 
 #ifndef UNIT_TEST
- private:
+ 
 #endif /* UNIT_TEST */
 
   /**
@@ -212,7 +212,7 @@ struct DDL {
   [[nodiscard]] db_err drop_all_foreign_keys_in_db(const char *name, Trx *trx) noexcept;
 
 #ifndef UNIT_TEST
- private:
+ 
 #endif /* UNIT_TEST */
 
   /**

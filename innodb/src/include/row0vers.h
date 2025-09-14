@@ -150,7 +150,7 @@ struct Row_vers {
   [[nodiscard]] db_err build_for_semi_consistent_read(Row &row) noexcept;
 
 #ifndef UNIT_TEST
- private:
+ 
 #endif /* !UNIT_TEST */
 
   /** The transaction system */

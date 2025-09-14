@@ -177,7 +177,7 @@ struct Log_core {
    */
   void block_store_checksum(byte *block) noexcept;
 
- private:
+ 
   /** Log sequence number */
   lsn_t m_lsn{};
 

@@ -392,9 +392,7 @@ struct Trx {
    */
   static void free_for_client(Trx *&trx) noexcept;
 
-#ifdef UNIV_TEST
- private:
-#endif /* UNIV_TEST */
+
   /**
    *  @brief Inserts the trx handle in the trx system trx list in the right position.
    *

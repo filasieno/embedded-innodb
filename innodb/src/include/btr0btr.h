@@ -568,7 +568,7 @@ struct Btree {
   static void destroy(Btree *&btree) noexcept;
 
 #ifdef UNIT_TEST
- private:
+ 
 #endif /* UNIT_TEST */
 
 #ifdef UNIV_BTR_DEBUG

@@ -34,13 +34,13 @@
             gbenchmark
             stdenv.cc
             graphviz
-            pkgs.liburing.dev
-            bsThreadPoolPkg
           ];
 
           # Ensure .pc and headers for liburing are available in dev/build envs
           buildInputs = [
             pkgs.liburing
+            pkgs.liburing.dev
+            bsThreadPoolPkg
           ];
           propagatedBuildInputs = [];
         in
@@ -69,10 +69,10 @@
               cmake \
                 -G Ninja \
                 -B build -S . \
-                -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+                -DCMAKE_BUILD_TYPE=Debug \
                 -DCMAKE_INSTALL_PREFIX=$out \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-                -DUNIT_TESTING=OFF \
+                -DUNIT_TESTING=ON \
                 -DDISABLE_XA=OFF
             '';
 
@@ -105,10 +105,10 @@
           pkgs   = common.pkgs;
           lib = pkgs.lib;
           pcPaths = lib.concatStringsSep ":" [
-            (lib.makeSearchPathOutput  "dev"   "lib/pkgconfig"   common.buildInputs)
-            (lib.makeSearchPathOutput  "dev"   "share/pkgconfig" common.buildInputs)
-            (lib.makeSearchPath        "lib/pkgconfig"           common.buildInputs)
-            (lib.makeSearchPath        "share/pkgconfig"         common.buildInputs)
+            (lib.makeSearchPathOutput  "dev"   "lib/pkgconfig"   (common.buildInputs ++ common.nativeBuildInputs))
+            (lib.makeSearchPathOutput  "dev"   "share/pkgconfig" (common.buildInputs ++ common.nativeBuildInputs))
+            (lib.makeSearchPath        "lib/pkgconfig"           (common.buildInputs ++ common.nativeBuildInputs))
+            (lib.makeSearchPath        "share/pkgconfig"         (common.buildInputs ++ common.nativeBuildInputs))
           ];
         in
         {
@@ -133,7 +133,7 @@
               export PS1="$YELLOW_BOLD(embedded-innodb)$RESET $GREEN[\u@\h:\w]\$$RESET "
 
               function ib-configure() {
-                cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX="$PWD/build/out" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUNIT_TESTING=OFF -DDISABLE_XA=OFF
+                cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX="$PWD/build/out" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUNIT_TESTING=ON -DDISABLE_XA=OFF
               }
               function ib-build() {
                 ninja -C build -v

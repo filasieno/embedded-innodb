@@ -344,7 +344,7 @@ struct WAL_IO_System {
     std::atomic<uint64_t> total_errors{0};
   } stats;
 
- private:
+ 
   /** io_uring instance (managed by unique_ptr) */
   Log_aio m_ring;
 

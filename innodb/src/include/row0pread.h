@@ -361,7 +361,7 @@ class Parallel_reader {
   Parallel_reader &operator=(Parallel_reader &&) = delete;
   Parallel_reader &operator=(const Parallel_reader &) = delete;
 
- private:
+ 
   /** Release unused threads back to the pool.
   @param[in] unused_threads     Number of threads to "release". */
   void release_unused_threads(size_t unused_threads) {
@@ -392,7 +392,7 @@ class Parallel_reader {
     return m_n_completed.load(std::memory_order_relaxed) < m_ctx_id.load(std::memory_order_relaxed);
   }
 
- private:
+ 
   // clang-format off
   using Ctxs = std::list<std::shared_ptr<Ctx>>;
 
@@ -466,7 +466,7 @@ class Parallel_reader::Scan_ctx {
   /** Destructor. */
   ~Scan_ctx() = default;
 
- private:
+ 
   /** Boundary of the range to scan. */
   struct Iter {
     /** Destructor. */
@@ -609,7 +609,7 @@ class Parallel_reader::Scan_ctx {
   /** @return true if at least one thread owns the S latch on the index. */
   bool index_s_own() const { return m_s_locks.load(std::memory_order_acquire) > 0; }
 
- private:
+ 
   using Config = Parallel_reader::Config;
 
   /** Context ID. */
@@ -693,7 +693,7 @@ class Parallel_reader::Ctx {
     return m_scan_ctx->check_visibility(rec, offsets, heap, mtr);
   }
 
- private:
+ 
   /** Traverse the pages by key order.
   @return DB_SUCCESS or error code. */
   [[nodiscard]] dberr_t traverse();
@@ -716,7 +716,7 @@ class Parallel_reader::Ctx {
   /** @return true if in error state. */
   [[nodiscard]] bool is_error_set() const { return m_scan_ctx->m_reader->is_error_set() || m_scan_ctx->is_error_set(); }
 
- private:
+ 
   /** Context ID. */
   size_t m_id{std::numeric_limits<size_t>::max()};
 

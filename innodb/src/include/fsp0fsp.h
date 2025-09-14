@@ -396,7 +396,7 @@ struct FSP {
    */
   [[nodiscard]] ulint get_size_low(page_t *page) noexcept;
 
- private:
+ 
   /**
    * Returns an extent to the free list of a space.
    * 

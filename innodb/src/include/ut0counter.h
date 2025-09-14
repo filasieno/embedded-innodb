@@ -65,7 +65,7 @@ struct Thread_id_indexer {
 
   [[nodiscard]] std::size_t get_index() const { return m_hash(std::this_thread::get_id()); }
 
- private:
+ 
   /** Note: This may result in collisions that could cause problems. */
   std::hash<std::thread::id> m_hash;
 };
@@ -123,7 +123,7 @@ struct Counters {
     }
   }
 
- private:
+ 
   T m_indexer;
   Counter<Int> m_counters[Shards];
 };

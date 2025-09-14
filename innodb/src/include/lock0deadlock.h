@@ -100,7 +100,7 @@ struct Deadlock_detector {
    */
   [[nodiscard]] ulint search_iterative(Trx *start, Trx *trx, Lock *wait_lock, ulint *cost, ulint depth) noexcept;
 
- private:
+ 
   /**
    * @brief Stack frame for iterative deadlock detection.
    *

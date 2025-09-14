@@ -341,7 +341,7 @@ struct Dynamic_array {
   }
 #endif /* UNIV_DEBUG */
 
- private:
+ 
   /** Adds a new block to a dyn array.
    * @return created block */
   Block *add_block() noexcept {
@@ -368,7 +368,7 @@ struct Dynamic_array {
     m_heap = mem_heap_create(sizeof(Block));
   }
 
- private:
+ 
 #ifdef UNIV_DEBUG
   /** CHeck whether the open/close sequence is correct. */
   bool m_is_open{false};

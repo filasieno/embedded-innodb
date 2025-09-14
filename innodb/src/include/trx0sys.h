@@ -586,7 +586,7 @@ struct Trx_sys {
   Read_view *open_read_view_now(trx_id_t cr_trx_id, mem_heap_t *heap);
 
 #ifdef UNIT_TEST
- private:
+ 
 #endif /* UNIT_TEST */
 
   /**

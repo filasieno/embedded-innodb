@@ -74,7 +74,7 @@ struct Trx_rseg {
    */
   void memory_free();
 
-private:
+
   /**
    * Creates and initializes a rollback segment object.
    */

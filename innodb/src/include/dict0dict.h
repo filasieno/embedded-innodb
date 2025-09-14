@@ -599,7 +599,7 @@ struct Dict {
   }
 
 #ifdef UNIT_TEST
- private:
+ 
 #endif /* UNIT_TEST */
 
   /**

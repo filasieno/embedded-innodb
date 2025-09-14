@@ -866,7 +866,7 @@ struct Buf_pool {
 
 #endif /* UNIV_DEBUG */
        /* @} */
-  private:
+  
   /**
    * @brief Sets the time of the first access of a page and moves a page to the
    * start of the buffer pool LRU list if it is too old.

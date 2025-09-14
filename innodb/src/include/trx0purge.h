@@ -135,7 +135,7 @@ struct Purge_sys {
    */
   std::string to_string() noexcept;
 
- private:
+ 
   /**
    * Stores info of an undo log record during a purge.
    *

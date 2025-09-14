@@ -43,7 +43,7 @@ struct Log_coreTest {
     std::cout << "All Log_core tests passed!\n";
   }
 
-private:
+
   static void test_constructor_destructor() {
     std::cout << "  Testing constructor/destructor...\n";
 

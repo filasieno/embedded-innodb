@@ -203,7 +203,7 @@ struct Trx_rollback {
   bool m_partial;             /*!< true if we want a partial rollback */
   trx_savept_t m_savept;      /*!< savepoint to which to roll back, in the case of a partial rollback */
 
-private:
+
   /**
    * @brief Roll back an active transaction.
    * @param[in] recovery Recovery flag

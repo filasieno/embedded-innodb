@@ -282,7 +282,7 @@ struct Buf_flush {
     ulint m_n_flushed{};
   };
 
- private:
+ 
   /**
    * @brief Insert a block in the m_recovery_flush_list and returns a pointer to its predecessor or nullptr if no predecessor.
    * The ordering is maintained on the basis of the <oldest_modification, space, offset> key.
@@ -381,7 +381,7 @@ struct Buf_flush {
    */
   bool ready_for_flush(Buf_page *bpage, buf_flush flush_type);
 
- private:
+ 
   /**
    * @brief The buffer pool.
    */

@@ -181,7 +181,7 @@ struct Bounded_channel {
     return false;
   }
 
- private:
+ 
   using Pad = std::byte[std::hardware_constructive_interference_size];
 
   struct alignas(T) Cell {

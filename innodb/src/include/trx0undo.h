@@ -526,7 +526,7 @@ struct Undo {
    */
   static void delete_undo(trx_undo_t *&undo) noexcept;
 
- private:
+ 
   /**
    * Gets the previous record in an undo log from the previous page.
    * 

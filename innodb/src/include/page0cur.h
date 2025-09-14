@@ -352,7 +352,7 @@ struct Page_cursor {
     return insert_rec_low(m_rec, index, rec, offsets, mtr);
   }
 
- private:
+ 
   /**
    * @brief Linear congruential generator PRNG.
    *

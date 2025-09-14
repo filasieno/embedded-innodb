@@ -579,7 +579,7 @@ struct Row_update {
   }
 
 #ifdef UNIT_TEST
- private:
+ 
 #endif /* UNIT_TEST */
 
   /**

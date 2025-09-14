@@ -184,7 +184,7 @@ struct Row_sel {
   [[nodiscard]] db_err unlock_for_client(Prebuilt *prebuilt, bool has_latches_on_recs) noexcept;
 
 #ifdef UNIT_TEST
- private:
+ 
 #endif /* UNIT_TEST */
 
   /**

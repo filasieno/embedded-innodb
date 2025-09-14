@@ -360,6 +360,6 @@ struct Trx_undo_record {
    */
   static ulint get_offset(undo_no_t undo_no) { return mach_uint64_get_much_compressed_size(undo_no) + 3; }
 
-private:
+
   trx_undo_rec_t *m_undo_rec{};
 };

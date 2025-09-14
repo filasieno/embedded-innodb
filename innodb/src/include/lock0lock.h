@@ -731,7 +731,7 @@ struct Lock_sys {
   static void destroy(Lock_sys *&lock_sys) noexcept;
 
 #ifndef UNIT_TESTING
- private:
+ 
 #endif /* !UNIT_TESTING */
 
   /**
@@ -1379,7 +1379,7 @@ struct Lock_sys {
   [[nodiscard]] bool trx_has_no_waiters(const Trx *trx) noexcept;
 
 #ifndef UNIT_TESTING
- private:
+ 
 #endif /* !UNIT_TESTING */
 
   /**

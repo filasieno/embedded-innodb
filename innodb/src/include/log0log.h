@@ -621,7 +621,7 @@ struct Log {
   */
   static void destroy(Log *&log) noexcept;
 
- private:
+ 
   /**
    * Returns the oldest modified block LSN in the pool, or m_lsn if none exists.
    * 

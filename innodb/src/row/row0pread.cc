@@ -271,7 +271,7 @@ class PCursor {
   /** @return true if cursor is after last on page. */
   [[nodiscard]] bool is_after_last_on_page() const noexcept { return m_pcur->is_after_last_on_page(); }
 
- private:
+ 
   /** Mini-transaction. */
   mtr_t *m_mtr{};
 

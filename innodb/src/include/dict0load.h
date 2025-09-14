@@ -122,7 +122,7 @@ struct Dict_load {
   db_err load_system_tables() noexcept;
 
 #ifndef UNIT_TEST
- private:
+ 
 #endif /* !UNIT_TEST */
 
   /**
@@ -208,9 +208,9 @@ struct Dict_load {
    */
   [[nodiscard]] db_err load_foreign(const char *id, bool check_charsets) noexcept;
 
- private:
+ 
 #ifndef UNIT_TEST
- private:
+ 
 #endif /* !UNIT_TEST */
 
   /**

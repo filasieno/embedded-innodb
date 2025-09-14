@@ -151,7 +151,7 @@ struct Lock_validator {
    */
   void print_info_all_transactions() noexcept;
 
- private:
+ 
   /** Pointer to the main lock system */
   Lock_sys *m_lock_sys;
 };

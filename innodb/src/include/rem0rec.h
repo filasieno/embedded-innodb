@@ -1399,7 +1399,7 @@ struct Phy_rec {
    */
   static void encode(Index *index, rec_t *rec, ulint status, const DFields &dfields) noexcept;
 
- private:
+ 
   /** Record belongs to this index. */
   const Index *m_index{};
 

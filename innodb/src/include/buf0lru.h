@@ -231,7 +231,7 @@ struct Buf_LRU {
    */
   ulint old_ratio_update(ulint old_pct, bool adjust);
 
- private:
+ 
   /** Takes a block out of the LRU list and page hash table.
 
   @param[in,out] bpage          block, must contain a file page and
@@ -285,7 +285,7 @@ struct Buf_LRU {
 				block is added to the start, regardless of this parameter */
   void add_block_low(Buf_page *bpage, bool old);
 
- private:
+ 
   static_assert(OLD_RATIO_MIN < OLD_RATIO_MAX, "error OLD_RATIO_MIN >= OLD_RATIO_MAX");
 
   static_assert(OLD_RATIO_MAX <= OLD_RATIO_DIV, "error OLD_RATIO_MAX > OLD_RATIO_DIV");

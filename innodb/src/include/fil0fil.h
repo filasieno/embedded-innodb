@@ -473,7 +473,7 @@ struct Fil {
   /** @return The number of fsyncs done to the log */
   ulint get_log_flushes() const { return m_n_log_flushes; }
 
- private:
+ 
   /**
    * @brief Frees a space object from the tablespace memory cache. Closes the files in
    * the chain but does not delete them. There must not be any pending i/o's or
@@ -691,7 +691,7 @@ struct Fil {
     const Page_id &page_id, const char *space_name, ulint byte_offset, ulint len, IO_request io_request
   );
 
- private:
+ 
   /** The number of fsyncs done to the log */
   ulint m_n_log_flushes{};
 

@@ -384,7 +384,7 @@ struct Record_lock_manager {
   [[nodiscard]] Lock *get_first(Page_id page_id, ulint heap_no) noexcept;
 #endif /* UNIV_DEBUG */
 
- private:
+ 
   /** Pointer to the main lock system */
   Lock_sys *m_lock_sys;
 };
