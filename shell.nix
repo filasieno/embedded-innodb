@@ -1,4 +1,4 @@
-# Minimal wrapper to load the default flake dev shell
+# Compatibility wrapper to load the `default` flake devShell
 let
   flake  = builtins.getFlake (toString ./.);
   system = builtins.currentSystem;
