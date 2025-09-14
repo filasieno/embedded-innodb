@@ -246,7 +246,7 @@ function(innodb_module module_dir)
     "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}/*.cc")
 
   # Step 2 — Define per-module OBJECT target (single compilation point for the module)
-  set(obj_tgt    "innodb_${module_dir}_obj")
+  set(obj_tgt    "mod_${module_dir}")
 
   if(module_sources STREQUAL "")
     add_library(${obj_tgt} OBJECT)
