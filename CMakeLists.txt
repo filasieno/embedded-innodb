@@ -239,7 +239,7 @@ add_custom_target(innodb_pch_build ALL DEPENDS ${PCH_GCH})
 # ---------------------------------------------------------------------------------------------------------------------
 function(innodb_module module_dir)
   # Step 1 — Gather sources for this module
-  file(GLOB module_sources CONFIGURE_DEPENDS
+  file(GLOB module_sources CONFIGURE_DEPENDS 
     "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}/*.cc")
 
   # Step 2 — Define per-module OBJECT target (single compilation point for the module)
@@ -373,4 +373,51 @@ install(TARGETS innodb
   LIBRARY DESTINATION lib
 )
 install(FILES ${CMAKE_SOURCE_DIR}/innodb/include/innodb.h DESTINATION include)
+
+
+
+# =====================================================================================================================
+# Tests
+# =====================================================================================================================
+
+# TODO
+set(UNIT_TEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/innodb/tests)
+
+# =====================================================================================================================
+# Integration testsconfiguration
+# =====================================================================================================================
+set(INTEGRATION_TEST_ROOT_DIR   "${CMAKE_SOURCE_DIR}/innodb/tests")
+set(INTEGRATION_TEST_SOURCE_DIR "${INTEGRATION_TEST_ROOT_DIR}/src")
+set(INTEGRATION_TEST_LIBS       pthread m)
+
+# Integration Test Common Object Library configuration
+
+file(GLOB integration_test_common_sources CONFIGURE_DEPENDS "${INTEGRATION_TEST_SOURCE_DIR}/common/*.cc")
+add_library(integration_test_common OBJECT ${integration_test_common_sources})
+target_include_directories(integration_test_common PRIVATE ${CMAKE_SOURCE_DIR}/innodb/include)
+
+
+# Integration Test Cconfiguration: `ib_cfg`
+add_executable(ib_cfg $<TARGET_OBJECTS:integration_test_common> ${INTEGRATION_TEST_SOURCE_DIR}/ib_cfg.cc)
+target_include_directories(ib_cfg PRIVATE ${CMAKE_SOURCE_DIR}/innodb/include)
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Integration testsconfiguration
+# ---------------------------------------------------------------------------------------------------------------------
+#
+#
+#
+#
+#
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+
 

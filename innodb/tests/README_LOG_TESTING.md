@@ -14,19 +14,25 @@ The original approach created a "standalone" version of Log_core (`log_core_stan
 Unit tests should test the actual production code, not reimplementations. Here are better approaches:
 
 ### 1. Integration Testing
+
 Use the full InnoDB API to test that logging functionality works:
+
 - `test_log0core_simple.cc` demonstrates this approach
 - Tests database initialization, startup, and shutdown which exercises the log system
 - Validates that the real Log_core implementation can handle basic operations
 
 ### 2. Dependency Injection/Mocking
+
 For true unit testing of Log_core:
+
 - Mock external dependencies (file system, memory allocation, etc.)
 - Test the real Log_core class with controlled inputs
 - This requires refactoring the Log_core to accept dependencies as parameters
 
 ### 3. Focused Integration Tests
+
 Create specific tests that exercise Log_core through higher-level operations:
+
 - Transaction logging
 - Recovery scenarios  
 - Buffer management with logging
@@ -41,6 +47,7 @@ Create specific tests that exercise Log_core through higher-level operations:
 ## Building Tests
 
 The current simple integration test can be built with:
+
 ```bash
 make test_log0core_simple
 ```

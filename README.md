@@ -10,10 +10,14 @@ Follow this [Nix installation guide](https://nix.dev/install-nix.html).
 
 #### Nix
 
-fter you have successfully installed **Nix** execute the following:
+After you have successfully installed **Nix** execute the following:
 
 ```shell
 git clone ....
+```
+
+```shell
+nix build 
 ```
 
 #### Debian
