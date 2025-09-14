@@ -1,19 +1,6 @@
 # Build directories
-cmake-build-*/
-install
-bin
-lib
-*.d
-*.o
-*.o[ls]
-*.obj
-*.so
-*.dylib
-*.dll
-*.exe
-*.a
-*.lib
-ib0config.h
+build
+result 
 
 # CMake
 .cmake
@@ -92,16 +79,20 @@ callgrind.out.*
 cachegrind.out.*
 massif.out.*
 
-*.rej
-*.orig
-/*.patch
-
+# liburing
 /src/liburing.a
 /src/liburing.so*
 /src/liburing-ffi.a
 /src/liburing-ffi.so*
 /src/include/liburing/compat.h
 /src/include/liburing/io_uring_version.h
+
+# nix build system
+result   
+
+*.rej
+*.orig
+/*.patch
 
 /examples/io_uring-close-test
 /examples/io_uring-cp
@@ -128,3 +119,6 @@ liburing.pc
 liburing-ffi.pc
 
 cscope.out
+
+# scratch: of folder not to be committed
+scratch

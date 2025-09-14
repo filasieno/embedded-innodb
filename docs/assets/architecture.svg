@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1000" viewBox="0 0 1100 1000" role="img" aria-label="Embedded InnoDB subsystem dependency diagram with API on top">
+  <title>Embedded InnoDB Subsystem Dependencies (API on top)</title>
+  <desc>Each row is a layer; arrows indicate dependency direction (top depends on lower layers).</desc>
+
+  <defs>
+    <style><![CDATA[
+      .box { rx: 6; ry: 6; stroke: #444; stroke-width: 1; }
+      .label { font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 14px; fill: #222; text-anchor: middle; dominant-baseline: middle; }
+      .title { font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-weight: 600; font-size: 18px; fill: #111; }
+      .group { font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #666; }
+      .legend { font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #444; }
+      .arrow { stroke: #888; stroke-width: 2; marker-end: url(#arrowHead); }
+    ]]></style>
+    <marker id="arrowHead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#888" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="550" y="24" class="title" text-anchor="middle">Embedded InnoDB Subsystem Dependencies</text>
+  <text x="550" y="44" class="group" text-anchor="middle">Higher-level layers depend on those below (top → down)</text>
+
+  <!-- Dependency direction arrow on the right -->
+  <line x1="1050" y1="100" x2="1050" y2="960" class="arrow" />
+  <text x="1040" y="96" class="legend" text-anchor="end">Depends ↓</text>
+
+  <!-- Layout constants used for manual placement:
+       width=1100, boxWidth=150, gap=18
+       Row x-starts (centered):
+       n=1 → x=475; n=2 → x=391; n=3 → x=307; n=5 → x=139
+       Row y positions: y(row) = 90 + (rowIndex-1)*64  (extra top spacing)
+  -->
+
+  <!-- Row 1: API -->
+  <rect class="box" x="475" y="100" width="150" height="36" fill="#DDEEFF" />
+  <text class="label" x="550" y="118">api</text>
+
+  <!-- Row 2: usr, srv -->
+  <rect class="box" x="391" y="164" width="150" height="36" fill="#E6FFFA" />
+  <text class="label" x="466" y="182">usr</text>
+  <rect class="box" x="559" y="164" width="150" height="36" fill="#E6FFFA" />
+  <text class="label" x="634" y="182">srv</text>
+
+  <!-- Row 3: pars, eval, que -->
+  <rect class="box" x="307" y="228" width="150" height="36" fill="#F1FFE6" />
+  <text class="label" x="382" y="246">pars</text>
+  <rect class="box" x="475" y="228" width="150" height="36" fill="#F1FFE6" />
+  <text class="label" x="550" y="246">eval</text>
+  <rect class="box" x="643" y="228" width="150" height="36" fill="#F1FFE6" />
+  <text class="label" x="718" y="246">que</text>
+
+  <!-- Row 4: dict, ddl -->
+  <rect class="box" x="391" y="292" width="150" height="36" fill="#FFF9CC" />
+  <text class="label" x="466" y="310">dict</text>
+  <rect class="box" x="559" y="292" width="150" height="36" fill="#FFF9CC" />
+  <text class="label" x="634" y="310">ddl</text>
+
+  <!-- Row 5: trx, lock, read -->
+  <rect class="box" x="307" y="356" width="150" height="36" fill="#FFE9CC" />
+  <text class="label" x="382" y="374">trx</text>
+  <rect class="box" x="475" y="356" width="150" height="36" fill="#FFE9CC" />
+  <text class="label" x="550" y="374">lock</text>
+  <rect class="box" x="643" y="356" width="150" height="36" fill="#FFE9CC" />
+  <text class="label" x="718" y="374">read</text>
+
+  <!-- Row 6: btr, row -->
+  <rect class="box" x="391" y="420" width="150" height="36" fill="#EAE6FF" />
+  <text class="label" x="466" y="438">btr</text>
+  <rect class="box" x="559" y="420" width="150" height="36" fill="#EAE6FF" />
+  <text class="label" x="634" y="438">row</text>
+
+  <!-- Row 7: mtr -->
+  <rect class="box" x="475" y="484" width="150" height="36" fill="#FCEEFF" />
+  <text class="label" x="550" y="502">mtr</text>
+
+  <!-- Row 8: data, rem -->
+  <rect class="box" x="391" y="548" width="150" height="36" fill="#EFEFEF" />
+  <text class="label" x="466" y="566">data</text>
+  <rect class="box" x="559" y="548" width="150" height="36" fill="#EFEFEF" />
+  <text class="label" x="634" y="566">rem</text>
+
+  <!-- Row 9: buf, page -->
+  <rect class="box" x="391" y="612" width="150" height="36" fill="#E6FFE6" />
+  <text class="label" x="466" y="630">buf</text>
+  <rect class="box" x="559" y="612" width="150" height="36" fill="#E6FFE6" />
+  <text class="label" x="634" y="630">page</text>
+
+  <!-- Row 10: log, fil, fsp -->
+  <rect class="box" x="307" y="676" width="150" height="36" fill="#FFEFE6" />
+  <text class="label" x="382" y="694">log</text>
+  <rect class="box" x="475" y="676" width="150" height="36" fill="#FFEFE6" />
+  <text class="label" x="550" y="694">fil</text>
+  <rect class="box" x="643" y="676" width="150" height="36" fill="#FFEFE6" />
+  <text class="label" x="718" y="694">fsp</text>
+
+  <!-- Row 11: sync, fut -->
+  <rect class="box" x="391" y="740" width="150" height="36" fill="#FFE6F3" />
+  <text class="label" x="466" y="758">sync</text>
+  <rect class="box" x="559" y="740" width="150" height="36" fill="#FFE6F3" />
+  <text class="label" x="634" y="758">fut</text>
+
+  <!-- Row 12: mem, os, mach -->
+  <rect class="box" x="307" y="804" width="150" height="36" fill="#EEEEFF" />
+  <text class="label" x="382" y="822">mem</text>
+  <rect class="box" x="475" y="804" width="150" height="36" fill="#EEEEFF" />
+  <text class="label" x="550" y="822">os</text>
+  <rect class="box" x="643" y="804" width="150" height="36" fill="#EEEEFF" />
+  <text class="label" x="718" y="822">mach</text>
+
+  <!-- Row 13: ut -->
+  <rect class="box" x="475" y="868" width="150" height="36" fill="#F5F5F5" />
+  <text class="label" x="550" y="886">ut</text>
+
+  <!-- Group labels on the left -->
+  <text x="70" y="180" class="group" text-anchor="start">Front-end</text>
+  <text x="70" y="310" class="group" text-anchor="start">Metadata</text>
+  <text x="70" y="380" class="group" text-anchor="start">Txn / Concurrency</text>
+  <text x="70" y="450" class="group" text-anchor="start">Access Methods</text>
+  <text x="70" y="518" class="group" text-anchor="start">Atomic Logging</text>
+  <text x="70" y="582" class="group" text-anchor="start">Record / Model</text>
+  <text x="70" y="646" class="group" text-anchor="start">Buffer / Page</text>
+  <text x="70" y="710" class="group" text-anchor="start">Storage / Logging</text>
+  <text x="70" y="774" class="group" text-anchor="start">Sync / Primitives</text>
+  <text x="70" y="838" class="group" text-anchor="start">Runtime / OS</text>
+  <text x="70" y="902" class="group" text-anchor="start">Core Utilities</text>
+
+</svg>
+
+

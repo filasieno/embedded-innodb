@@ -12,6 +12,8 @@ jobs:
     container: gcc:13
     strategy:
       fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
     steps:
       - uses: actions/checkout@v3
       - name: Install Flex and Bison

@@ -130,7 +130,7 @@
 #cmakedefine STDC_HEADERS
 #cmakedefine TIME_WITH_SYS_TIME
 #cmakedefine TM_IN_SYS_TIME
-#cmakedefine VERSION
+#cmakedefine VERSION "@VERSION@"
 #cmakedefine CONST
 #cmakedefine INLINE
 #cmakedefine OFF_T
