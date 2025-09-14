@@ -177,6 +177,7 @@ configure_file(
 # Objective: Define a single PCH target to be reused by all module/object/static targets
 # - Every module links against this to share common includes/defs
 add_library(innodb_pch INTERFACE)
+
 # Propagate common include directories and compile definitions via innodb_pch
 target_include_directories(innodb_pch INTERFACE
   ${CMAKE_SOURCE_DIR}/innodb/src/include
@@ -191,8 +192,8 @@ target_compile_definitions(innodb_pch INTERFACE
 )
 
 # Build a single PCH once and reuse (-include) across all compilations
-set(PCH_DIR        ${CMAKE_BINARY_DIR}/pch)
 set(PCH_HEADER_SRC ${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h)
+set(PCH_DIR        ${CMAKE_BINARY_DIR}/pch)
 set(PCH_HEADER     ${PCH_DIR}/innodb_pch.h)
 set(PCH_GCH        ${PCH_DIR}/innodb_pch.h.gch)
 
@@ -214,8 +215,9 @@ add_custom_command(OUTPUT ${PCH_GCH}
   COMMAND ${CMAKE_CXX_COMPILER} -x c++-header -std=c++23 -DUNIV_LINUX ${PCH_DEBUG_DEF} ${PCH_DEBUG_FLAGS} ${PCH_INCLUDE_FLAGS} -o ${PCH_GCH} ${PCH_HEADER}
   DEPENDS ${PCH_HEADER_SRC}
   VERBATIM)
-add_custom_target(innodb_pch_build ALL DEPENDS ${PCH_GCH})
 
+add_custom_target(innodb_pch_build ALL DEPENDS ${PCH_GCH})
+set_target_properties(innodb_pch_build PROPERTIES FOLDER "innodb")
 # ---------------------------------------------------------------------------------------------------------------------
 # Configuration checks (to generate ib0config.h)
 
@@ -269,6 +271,8 @@ function(innodb_module module_dir)
 
   # Step 3 — Register object target for the final aggregated library
   set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${obj_tgt})
+
+  set_target_properties(${obj_tgt} PROPERTIES FOLDER "innodb")
 endfunction()
 
 # Register all modules
@@ -313,7 +317,7 @@ endforeach()
 # - Keeps per-module libs for modular linking/testing
 # - Provides a single aggregate `innodb` archive
 add_library(innodb STATIC ${INNODB_ALL_OBJECTS})
-
+set_target_properties(innodb PROPERTIES FOLDER "innodb")
 target_compile_features(innodb PRIVATE cxx_std_23)
 target_compile_options(innodb PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
 target_include_directories(innodb PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/innodb/include>)
@@ -385,7 +389,7 @@ install(FILES ${CMAKE_SOURCE_DIR}/innodb/include/innodb.h DESTINATION include)
 set(UNIT_TEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/innodb/tests)
 
 # =====================================================================================================================
-# Integration testsconfiguration
+# Integration tests configuration
 # =====================================================================================================================
 set(INTEGRATION_TEST_ROOT_DIR          "${CMAKE_SOURCE_DIR}/innodb/tests")
 set(INTEGRATION_TEST_SOURCE_DIR        "${INTEGRATION_TEST_ROOT_DIR}/src")
@@ -400,7 +404,7 @@ set(INTEGRATION_TEST_COMMON_INCLUDES   "${CMAKE_SOURCE_DIR}/innodb/include"
 file(GLOB integration_test_common_sources CONFIGURE_DEPENDS "${INTEGRATION_TEST_SOURCE_DIR}/common/*.cc")
 add_library(integration_test_common OBJECT ${integration_test_common_sources})
 target_include_directories(integration_test_common PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
-
+set_target_properties(integration_test_common PROPERTIES FOLDER "integration_tests")
 
 # Integration Test Cconfiguration: `ib_cfg`
 function(innodb_integration_test executable_name main_src_file)
@@ -408,31 +412,32 @@ function(innodb_integration_test executable_name main_src_file)
   target_include_directories(${executable_name} PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
   target_link_libraries(${executable_name} PRIVATE integration_test_common innodb ${INTEGRATION_TEST_LIBS})
   set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/bin)
+  set_target_properties(${executable_name} PROPERTIES FOLDER "integration_tests")
 endfunction()
 
-innodb_integration_test(ib_cfg               ib_cfg.cc             )
-innodb_integration_test(ib_cursor            ib_cursor.cc          )
-innodb_integration_test(ib_ddl               ib_ddl.cc             )
-innodb_integration_test(ib_dict              ib_dict.cc            )
-innodb_integration_test(ib_dict-2            ib_dict-2.cc          )
-innodb_integration_test(ib_drop              ib_drop.cc            )
-innodb_integration_test(ib_index             ib_index.cc           )
-innodb_integration_test(ib_logger            ib_logger.cc          )
-innodb_integration_test(ib_recover           ib_recover.cc         )
-innodb_integration_test(ib_shutdown          ib_shutdown.cc        )
-innodb_integration_test(ib_status            ib_status.cc          )
-innodb_integration_test(ib_tablename         ib_tablename.cc       )
-innodb_integration_test(ib_test1             ib_test1.cc           )
-innodb_integration_test(ib_test2             ib_test2.cc           )
-innodb_integration_test(ib_test3             ib_test3.cc           )
-innodb_integration_test(ib_test5             ib_test5.cc           )
-innodb_integration_test(ib_types             ib_types.cc           )
-innodb_integration_test(ib_update            ib_update.cc          )
-innodb_integration_test(ib_search            ib_search.cc          )
-innodb_integration_test(ib_parallel_reader   ib_parallel_reader.cc )
-innodb_integration_test(ib_deadlock          ib_deadlock.cc        )
-innodb_integration_test(ib_mt_stress         ib_mt_stress.cc       )
-innodb_integration_test(ib_perf1             ib_perf1.cc           )
+innodb_integration_test(itest_ib_cfg               ib_cfg.cc             )
+innodb_integration_test(itest_ib_cursor            ib_cursor.cc          )
+innodb_integration_test(itest_ib_ddl               ib_ddl.cc             )
+innodb_integration_test(itest_ib_dict              ib_dict.cc            )
+innodb_integration_test(itest_ib_dict-2            ib_dict-2.cc          )
+innodb_integration_test(itest_ib_drop              ib_drop.cc            )
+innodb_integration_test(itest_ib_index             ib_index.cc           )
+innodb_integration_test(itest_ib_logger            ib_logger.cc          )
+innodb_integration_test(itest_ib_recover           ib_recover.cc         )
+innodb_integration_test(itest_ib_shutdown          ib_shutdown.cc        )
+innodb_integration_test(itest_ib_status            ib_status.cc          )
+innodb_integration_test(itest_ib_tablename         ib_tablename.cc       )
+innodb_integration_test(itest_ib_test1             ib_test1.cc           )
+innodb_integration_test(itest_ib_test2             ib_test2.cc           )
+innodb_integration_test(itest_ib_test3             ib_test3.cc           )
+innodb_integration_test(itest_ib_test5             ib_test5.cc           )
+innodb_integration_test(itest_ib_types             ib_types.cc           )
+innodb_integration_test(itest_ib_update            ib_update.cc          )
+innodb_integration_test(itest_ib_search            ib_search.cc          )
+innodb_integration_test(itest_ib_parallel_reader   ib_parallel_reader.cc )
+innodb_integration_test(itest_ib_deadlock          ib_deadlock.cc        )
+innodb_integration_test(itest_ib_mt_stress         ib_mt_stress.cc       )
+innodb_integration_test(itest_ib_perf1             ib_perf1.cc           )
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Integration testsconfiguration
