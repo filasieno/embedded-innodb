@@ -130,9 +130,17 @@
 #cmakedefine STDC_HEADERS
 #cmakedefine TIME_WITH_SYS_TIME
 #cmakedefine TM_IN_SYS_TIME
-#cmakedefine VERSION "@VERSION@"
+
 #cmakedefine CONST
 #cmakedefine INLINE
 #cmakedefine OFF_T
 #cmakedefine SIZE_T
 #cmakedefine VOLATILE
+
+#cmakedefine VERSION                 "@VERSION@"
+#cmakedefine IB_API_VERSION_STRING    @API_VERSION@
+
+#define IB_API_VERSION_CURRENT        @API_VERSION@
+#define IB_API_VERSION_REVISION       @API_VERSION_REVISION@
+#define IB_API_VERSION_AGE            @API_VERSION_AGE@
+

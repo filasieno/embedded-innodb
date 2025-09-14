@@ -962,14 +962,14 @@ db_err Undo::assign_undo(Trx *trx, ulint type) noexcept {
 #ifdef WITH_XOPEN
   auto undo = reuse_cached(trx, rseg, type, trx->m_id, &trx->m_xid, &mtr);
 #else
-  auto undo = reuse_cached(trx, rseg, type, trx->id, &mtr);
+  auto undo = reuse_cached(trx, rseg, type, trx->m_id, &mtr);
 #endif /* WITH_XOPEN */
 
   if (undo == nullptr) {
 #ifdef WITH_XOPEN
     auto err = trx_undo_create(trx, rseg, type, trx->m_id, &trx->m_xid, &undo, &mtr);
 #else
-    auto err = trx_undo_create(trx, rseg, type, trx->id, nullptr, &undo, &mtr);
+    auto err = trx_undo_create(trx, rseg, type, trx->m_id, nullptr, &undo, &mtr);
 #endif /* WITH_OPEN */
 
     if (err != DB_SUCCESS) {

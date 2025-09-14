@@ -2,12 +2,94 @@ cmake_minimum_required(VERSION 3.24)
 
 project(embedded-innodb LANGUAGES C CXX)
 
-# Genal configuration
+# ---------------------------------------------------------------------------------------------------------------------
+# General configuration
+# ---------------------------------------------------------------------------------------------------------------------
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# ---------------------------------------------------------------------------------------------------------------------
+
 # C++ standard
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD            23)
+set(CMAKE_CXX_STANDARD_REQUIRED   ON)
+set(CMAKE_CXX_EXTENSIONS          OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Objective: Centralize all binary outputs for predictable, clean build artifacts
+# - Static libraries in:   ${CMAKE_BINARY_DIR}/innodb/lib
+# - Shared libraries in:   ${CMAKE_BINARY_DIR}/innodb/lib
+# - Runtimes (if any) in:  ${CMAKE_BINARY_DIR}/innodb/lib
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
+
+# ---------------------------------------------------------------------------------------------------------------------
+# end General configuration
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Library and API Versioning section
+# ---------------------------------------------------------------------------------------------------------------------
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Define the version for Embedded InnoDB
+set(VERSION "0.1")
+
+# Define the API version
+set(API_VERSION          6)   # Increment if interfaces have been added, removed or changed
+set(API_VERSION_REVISION 0)   # Increment if source code has changed, set to zero if current is incremented
+set(API_VERSION_AGE      0)   # Increment if interfaces have been added, set to zero if interfaces have been removed or changed
+
+# API version string used in compile definitions later
+set(IB_API_VERSION_STRING "${API_VERSION}:${API_VERSION_REVISION}:${API_VERSION_AGE}")
+message(STATUS "VERSION:               " ${VERSION})
+message(STATUS "IB_API_VERSION_STRING: " ${IB_API_VERSION_STRING})
+# ---------------------------------------------------------------------------------------------------------------------
+# end Library and API Versioning section
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Setup CI Build Matrix and Build options
+# ---------------------------------------------------------------------------------------------------------------------
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# ---------------------------------------------------------------------------------------------------------------------
 
 # Build types: Debug (default) or Release
 if(NOT CMAKE_CONFIGURATION_TYPES)
@@ -40,10 +122,27 @@ add_compile_definitions($<$<CONFIG:Debug>:UNIV_DEBUG>)
 
 # Silence Clang-only warning that fires on some constexpr comparisons in headers
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
+# ---------------------------------------------------------------------------------------------------------------------
+# end Setup CI Build Matrix and Build options
 
-# ----------------------------------------------------------------------------
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # Configuration checks (to generate ib0config.h)
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# ---------------------------------------------------------------------------------------------------------------------
 include(CheckTypeSize)
 include(CheckIncludeFiles)
 
@@ -67,34 +166,92 @@ set(CMAKE_EXTRA_INCLUDE_FILES)
 
 check_include_files("stdint.h"            HAVE_STDINT_H)
 
-# Generate ib0config.h
+# Objective: Generate configuration header used by sources during compilation
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
 configure_file(
   ${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
   ${CMAKE_BINARY_DIR}/include/ib0config.h
 )
 
-# Precompiled headers (PCH)
+# Objective: Define a single PCH target to be reused by all module/object/static targets
+# - Every module links against this to share common includes/defs
 add_library(innodb_pch INTERFACE)
-target_precompile_headers(innodb_pch INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h>
+# Propagate common include directories and compile definitions via innodb_pch
+target_include_directories(innodb_pch INTERFACE
+  ${CMAKE_SOURCE_DIR}/innodb/src/include
+  ${CMAKE_SOURCE_DIR}/innodb/include
+  ${CMAKE_BINARY_DIR}/include
+  ${BS_THREAD_POOL_INCLUDE_DIRS}
+  ${LIBURING_INCLUDE_DIRS}
+)
+target_compile_definitions(innodb_pch INTERFACE
+  $<$<CONFIG:Debug>:UNIV_DEBUG>
+  UNIV_LINUX
 )
 
-# Helper: define one OBJECT library per module and a STATIC archive per module
-function(innodb_add_module module_basename module_dir)
+# Build a single PCH once and reuse (-include) across all compilations
+set(PCH_DIR        ${CMAKE_BINARY_DIR}/pch)
+set(PCH_HEADER_SRC ${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h)
+set(PCH_HEADER     ${PCH_DIR}/innodb_pch.h)
+set(PCH_GCH        ${PCH_DIR}/innodb_pch.h.gch)
+
+set(PCH_INCLUDE_FLAGS)
+foreach(_dir ${CMAKE_SOURCE_DIR}/innodb/src/include ${CMAKE_SOURCE_DIR}/innodb/include ${CMAKE_BINARY_DIR}/include ${BS_THREAD_POOL_INCLUDE_DIRS} ${LIBURING_INCLUDE_DIRS})
+  list(APPEND PCH_INCLUDE_FLAGS -I${_dir})
+endforeach()
+
+set(PCH_DEBUG_DEF)
+set(PCH_DEBUG_FLAGS)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(PCH_DEBUG_DEF -DUNIV_DEBUG)
+  set(PCH_DEBUG_FLAGS -g)
+endif()
+
+add_custom_command(OUTPUT ${PCH_GCH}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PCH_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PCH_HEADER_SRC} ${PCH_HEADER}
+  COMMAND ${CMAKE_CXX_COMPILER} -x c++-header -std=c++23 -DUNIV_LINUX ${PCH_DEBUG_DEF} ${PCH_DEBUG_FLAGS} ${PCH_INCLUDE_FLAGS} -o ${PCH_GCH} ${PCH_HEADER}
+  DEPENDS ${PCH_HEADER_SRC}
+  VERBATIM)
+add_custom_target(innodb_pch_build ALL DEPENDS ${PCH_GCH})
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Configuration checks (to generate ib0config.h)
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Embedded InnoDB module definitions
+# ---------------------------------------------------------------------------------------------------------------------
+# Objective: Define helper to create per-module targets and register their objects for aggregation
+#
+# innodb_module(<module_dir>) performs:
+#  1) Gather sources for the module
+#  2) Create an OBJECT library to compile sources once with common flags/includes
+#  3) Register the OBJECT target so the final monolithic lib can aggregate all objects
+#
+# ---------------------------------------------------------------------------------------------------------------------
+function(innodb_module module_dir)
+  # Step 1 — Gather sources for this module
   file(GLOB module_sources CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}/*.cc")
 
-  set(obj_tgt    "${module_basename}_obj")
-  set(static_tgt "${module_basename}")
+  # Step 2 — Define per-module OBJECT target (single compilation point for the module)
+  set(obj_tgt    "innodb_${module_dir}_obj")
 
   if(module_sources STREQUAL "")
     add_library(${obj_tgt} OBJECT)
   else()
     add_library(${obj_tgt} OBJECT ${module_sources})
   endif()
-  target_compile_options(${obj_tgt}  PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
   target_compile_features(${obj_tgt} PRIVATE cxx_std_23)
+  target_compile_options(${obj_tgt} PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
   target_include_directories(${obj_tgt}
     PRIVATE
       ${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}
@@ -105,99 +262,115 @@ function(innodb_add_module module_basename module_dir)
       ${LIBURING_INCLUDE_DIRS}
   )
   target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
+  # Reuse the single PCH across all compilations
+  add_dependencies(${obj_tgt} innodb_pch_build)
+  target_compile_options(${obj_tgt} PRIVATE -Winvalid-pch -include ${PCH_HEADER})
 
-  add_library(${static_tgt} STATIC $<TARGET_OBJECTS:${obj_tgt}>)
-  target_compile_features(${static_tgt} PRIVATE cxx_std_23)
-  target_include_directories(${static_tgt} PUBLIC ${CMAKE_SOURCE_DIR}/innodb/include)
-  target_include_directories(${static_tgt} PRIVATE ${BS_THREAD_POOL_INCLUDE_DIRS} ${LIBURING_INCLUDE_DIRS})
-  target_link_libraries(${static_tgt} PRIVATE innodb_pch)
+  # Step 3 — Register object target for the final aggregated library
+  set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${obj_tgt})
 endfunction()
 
-# ---------------------------------------------------------------------------------------------------------------------
-# Configure InnoDB modules section 
-# --------------------------------------------------------------------------------------------------------------------
-innodb_add_module(innodb_ut     ut)
-innodb_add_module(innodb_mach   mach)
-innodb_add_module(innodb_os     os)
-innodb_add_module(innodb_mem    mem)
-innodb_add_module(innodb_sync   sync)
-innodb_add_module(innodb_fut    fut)
-innodb_add_module(innodb_log    log)
-innodb_add_module(innodb_fil    fil)
-innodb_add_module(innodb_fsp    fsp)
-innodb_add_module(innodb_buf    buf)
-innodb_add_module(innodb_page   page)
-innodb_add_module(innodb_data   data)
-innodb_add_module(innodb_rem    rem)
-innodb_add_module(innodb_mtr    mtr)
-innodb_add_module(innodb_btr    btr)
-innodb_add_module(innodb_row    row)
-innodb_add_module(innodb_trx    trx)
-innodb_add_module(innodb_lock   lock)
-innodb_add_module(innodb_read   read)
-innodb_add_module(innodb_dict   dict)
-innodb_add_module(innodb_ddl    ddl)
-innodb_add_module(innodb_pars   pars)
-innodb_add_module(innodb_eval   eval)
-innodb_add_module(innodb_que    que)
-innodb_add_module(innodb_srv    srv)
-innodb_add_module(innodb_usr    usr)
-innodb_add_module(innodb_api    api)
-# ---------------------------------------------------------------------------------------------------------------------
-# configure innodb modules section 
+# Register all modules
+innodb_module("ut")
+innodb_module("mach")
+innodb_module("os")
+innodb_module("mem")
+innodb_module("sync")
+innodb_module("fut")
+innodb_module("log")
+innodb_module("fil")
+innodb_module("fsp")
+innodb_module("buf")
+innodb_module("page")
+innodb_module("data")
+innodb_module("rem")
+innodb_module("mtr")
+innodb_module("btr")
+innodb_module("row")
+innodb_module("trx")
+innodb_module("lock")
+innodb_module("read")
+innodb_module("dict")
+innodb_module("ddl")
+innodb_module("pars")
+innodb_module("eval")
+innodb_module("que")
+innodb_module("srv")
+innodb_module("usr")
+innodb_module("api")
 
-# Final single static archive from all module objects
-add_library(innodb STATIC
-  $<TARGET_OBJECTS:innodb_ut_obj>
-  $<TARGET_OBJECTS:innodb_mach_obj>
-  $<TARGET_OBJECTS:innodb_os_obj>
-  $<TARGET_OBJECTS:innodb_mem_obj>
-  $<TARGET_OBJECTS:innodb_sync_obj>
-  $<TARGET_OBJECTS:innodb_fut_obj>
-  $<TARGET_OBJECTS:innodb_log_obj>
-  $<TARGET_OBJECTS:innodb_fil_obj>
-  $<TARGET_OBJECTS:innodb_fsp_obj>
-  $<TARGET_OBJECTS:innodb_buf_obj>
-  $<TARGET_OBJECTS:innodb_page_obj>
-  $<TARGET_OBJECTS:innodb_data_obj>
-  $<TARGET_OBJECTS:innodb_rem_obj>
-  $<TARGET_OBJECTS:innodb_mtr_obj>
-  $<TARGET_OBJECTS:innodb_btr_obj>
-  $<TARGET_OBJECTS:innodb_row_obj>
-  $<TARGET_OBJECTS:innodb_trx_obj>
-  $<TARGET_OBJECTS:innodb_lock_obj>
-  $<TARGET_OBJECTS:innodb_read_obj>
-  $<TARGET_OBJECTS:innodb_dict_obj>
-  $<TARGET_OBJECTS:innodb_ddl_obj>
-  $<TARGET_OBJECTS:innodb_pars_obj>
-  $<TARGET_OBJECTS:innodb_eval_obj>
-  $<TARGET_OBJECTS:innodb_que_obj>
-  $<TARGET_OBJECTS:innodb_srv_obj>
-  $<TARGET_OBJECTS:innodb_usr_obj>
-  $<TARGET_OBJECTS:innodb_api_obj>
-)
+# Objective: Resolve all registered module OBJECT targets and expand them to object files
+get_property(INNODB_OBJ_TARGETS GLOBAL PROPERTY INNODB_OBJ_TARGETS)
+
+# Expand objects from all modules
+set(INNODB_ALL_OBJECTS)
+foreach(obj_tgt IN LISTS INNODB_OBJ_TARGETS)
+  list(APPEND INNODB_ALL_OBJECTS $<TARGET_OBJECTS:${obj_tgt}>)
+endforeach()
+
+# Objective: Build the final monolithic static library from every module's objects
+# - Keeps per-module libs for modular linking/testing
+# - Provides a single aggregate `innodb` archive
+add_library(innodb STATIC ${INNODB_ALL_OBJECTS})
 
 target_compile_features(innodb PRIVATE cxx_std_23)
+target_compile_options(innodb PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
 target_include_directories(innodb PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/innodb/include>)
-target_include_directories(innodb PRIVATE ${BS_THREAD_POOL_INCLUDE_DIRS} ${LIBURING_INCLUDE_DIRS})
-target_link_libraries(innodb PRIVATE ${LIBURING_LIBRARIES})
+target_include_directories(innodb PRIVATE
+  ${CMAKE_SOURCE_DIR}/innodb/src/include
+  ${CMAKE_BINARY_DIR}/include
+  ${BS_THREAD_POOL_INCLUDE_DIRS}
+  ${LIBURING_INCLUDE_DIRS}
+)
+target_link_libraries(innodb PRIVATE innodb_pch ${LIBURING_LIBRARIES})
 set_target_properties(innodb PROPERTIES OUTPUT_NAME "innodb")
 
+# ---------------------------------------------------------------------------------------------------------------------
+# end Embedded InnoDB module definitions
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Generate Doxygen Documentation
+# ---------------------------------------------------------------------------------------------------------------------
+#
+#
+#
+#
+#
+# ---------------------------------------------------------------------------------------------------------------------
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+  set(DOXYGEN_PROJECT_NAME       "Embedded InnoDB")
+  set(DOXYGEN_GENERATE_HTML      YES)
+  set(DOXYGEN_GENERATE_LATEX     NO)
+  set(DOXYGEN_RECURSIVE          YES)
+  set(DOXYGEN_OUTPUT_DIRECTORY   "${CMAKE_BINARY_DIR}/docs")
+endif()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# end Generate Doxygen Documentation
+
+
+
+
+
+
+
+
+
+# TODO: Installation
 install(TARGETS innodb
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
 )
 install(FILES ${CMAKE_SOURCE_DIR}/innodb/include/innodb.h DESTINATION include)
 
-# Optional Doxygen target
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-  set(DOXYGEN_PROJECT_NAME "Embedded InnoDB")
-  set(DOXYGEN_GENERATE_HTML YES)
-  set(DOXYGEN_GENERATE_LATEX NO)
-  set(DOXYGEN_RECURSIVE YES)
-  set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/docs")
-  doxygen_add_docs(docs ${CMAKE_SOURCE_DIR}/innodb/include)
-endif()
-
- 
