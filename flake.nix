@@ -123,8 +123,10 @@
             buildInputs = common.buildInputs;
             
             shellHook = ''
+              export PROJECT_ROOT=$(git rev-parse --show-toplevel)
               export PKG_CONFIG_PATH=${pcPaths}:$PKG_CONFIG_PATH
-              
+              export PATH=$PROJECT_ROOT/build/tests/bin:$PATH
+
               # Bold yellow project segment, then green user@host:cwd
               
               YELLOW_BOLD="\[\e[1;33m\]"
