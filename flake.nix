@@ -20,7 +20,9 @@
       commonFor = system:
         let
           pkgs = import nixpkgs { inherit system; };
+
           bsThreadPoolPkg = bs-thread-pool.packages.${system}.default;
+          
           nativeBuildInputs = with pkgs; [
             cmake
             ninja
@@ -30,12 +32,15 @@
             pkg-config
             gtest
             gbenchmark
+            stdenv.cc
+            graphviz
+            pkgs.liburing.dev
+            bsThreadPoolPkg
           ];
+
           # Ensure .pc and headers for liburing are available in dev/build envs
           buildInputs = [
             pkgs.liburing
-            pkgs.liburing.dev
-            bsThreadPoolPkg
           ];
           propagatedBuildInputs = [];
         in
@@ -111,15 +116,13 @@
             nativeBuildInputs = [] 
               ++ common.nativeBuildInputs
               ++ (with pkgs; [
-                clang-tools
+                cmakeWithGui
                 ccache
               ]);
 
             buildInputs = common.buildInputs;
             
             shellHook = ''
-              export CC=${pkgs.stdenv.cc.cc}/bin/cc
-              export CXX=${pkgs.stdenv.cc.cc}/bin/c++
               export PKG_CONFIG_PATH=${pcPaths}:$PKG_CONFIG_PATH
               
               # Bold yellow project segment, then green user@host:cwd
@@ -130,7 +133,7 @@
               export PS1="$YELLOW_BOLD(embedded-innodb)$RESET $GREEN[\u@\h:\w]\$$RESET "
 
               function ib-configure() {
-                cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$out -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUNIT_TESTING=OFF -DDISABLE_XA=OFF
+                cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX="$PWD/build/out" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUNIT_TESTING=OFF -DDISABLE_XA=OFF
               }
               function ib-build() {
                 ninja -C build -v

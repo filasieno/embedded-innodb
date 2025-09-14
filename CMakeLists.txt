@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(embedded-innodb LANGUAGES C CXX)
 
+# Genal configuration
 # C++ standard
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -65,18 +66,6 @@ check_type_size(pthread_t SIZEOF_PTHREAD_T)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
 check_include_files("stdint.h"            HAVE_STDINT_H)
-if(HAVE_STDINT_H)
-  set(CMAKE_EXTRA_INCLUDE_FILES stdint.h)
-  check_type_size(int8_t    SIZEOF_INT8_T)
-  check_type_size(uint8_t   SIZEOF_UINT8_T)
-  check_type_size(int16_t   SIZEOF_INT16_T)
-  check_type_size(uint16_t  SIZEOF_UINT16_T)
-  check_type_size(int32_t   SIZEOF_INT32_T)
-  check_type_size(uint32_t  SIZEOF_UINT32_T)
-  check_type_size(int64_t   SIZEOF_INT64_T)
-  check_type_size(uint64_t  SIZEOF_UINT64_T)
-  set(CMAKE_EXTRA_INCLUDE_FILES)
-endif()
 
 # Generate ib0config.h
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
