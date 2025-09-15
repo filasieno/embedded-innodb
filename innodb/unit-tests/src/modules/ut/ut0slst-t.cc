@@ -15,12 +15,11 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 *****************************************************************************/
 
+#include <gtest/gtest.h>
+
 #include <cstdint>
 
 #include "log0log.h"
-
-#include "gtest/gtest.h"
-
 #include "ut0slst.h"
 
 struct TestNode {

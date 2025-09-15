@@ -948,7 +948,9 @@ void InnoDB::modules_var_init() noexcept {
   below should have any dependencies. */
   rw_lock_var_init();
   que_var_init();
-  pars_var_init();
+  pars_system_init(&g_parser_system);
+  
+  // pars_var_init(&g_parser_system);
   os_proc_var_init();
   os_file_var_init();
   sync_var_init();

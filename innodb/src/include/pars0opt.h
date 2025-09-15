@@ -24,13 +24,15 @@ Created 12/21/1997 Heikki Tuuri
 
 #pragma once
 
-#include "innodb0types.h"
-
 #include "dict0types.h"
 #include "pars0sym.h"
 #include "que0types.h"
 #include "row0sel.h"
-#include "usr0types.h"
+
+// #include "usr0types.h"
+// #include "innodb0types.h"
+// #include <cstddef>
+
 
 /**
  * @brief Optimizes a select statement.
@@ -40,7 +42,7 @@ Created 12/21/1997 Heikki Tuuri
  *
  * @param[in] sel_node Parsed select node.
  */
-void opt_search_plan(sel_node_t *sel_node);
+void opt_search_plan(sym_tab_t *sym_tab, sel_node_t *sel_node);
 
 /**
  * @brief Looks for occurrences of the columns of the table in the query subgraph and

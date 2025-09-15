@@ -1205,7 +1205,8 @@ db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
   os_sync_free();
 
   /* 5. Free all allocated memory */
-  pars_close();
+  Parser_context ctx{};
+  pars_close(&ctx);
 
   Log::destroy(log_sys);
 
@@ -1219,7 +1220,7 @@ db_err InnoDB::shutdown(ib_shutdown_t shutdown) noexcept {
   /* This variable should come from the user and should not be
   malloced by InnoDB. */
 
-  pars_lexer_var_init();
+  pars_lexer_var_init(&ctx);
 
   ut_delete_all_mem();
 

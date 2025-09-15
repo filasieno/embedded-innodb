@@ -4,8 +4,9 @@ Copyright (c) 2025 Sunny Bains. All rights reserved.
 Unit tests for log_io.cc functions
 *****************************************************************************/
 
-#include <fcntl.h>
 #include <gtest/gtest.h>
+
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cstring>

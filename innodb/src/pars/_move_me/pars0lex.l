@@ -45,18 +45,14 @@ Created 12/14/1997 Heikki Tuuri
 %option noinput
 %option nounput
 %option noyywrap
-%option reentrant
-%option bison-bridge
+%option noyy_scan_buffer
+%option noyy_scan_bytes
+%option noyy_scan_string
 %option nounistd
+%option c++
 
 %{
 #define YYSTYPE que_node_t*
-#define YY_DECL int yylex(YYSTYPE* yylval_param, yyscan_t yyscanner)
-#define SET_YYLVAL(node_ptr) do { (*yylval_param) = reinterpret_cast<que_node_t*>(node_ptr); } while(0)
-#define YY_EXTRA_TYPE Parser_context*
-#define CTX (yyget_extra(yyscanner))
-#define YYText() yyget_text(yyscanner)
-#define YYLeng() yyget_leng(yyscanner)
 
 #include "pars0pars.h"
 #include "pars0grm.h"
@@ -69,11 +65,21 @@ Created 12/14/1997 Heikki Tuuri
 #define realloc(P, A)  ut_realloc(P, A)
 #define exit(A)        ut_error
 
-/* Input provided via yy_scan_bytes; no YY_INPUT override needed */
+/* Note: We cast result from int to yy_size_t */
+#define YY_INPUT(buf, result, max_size) ((result) = pars_get_lex_chars(buf, max_size))
 
 /* String buffer for removing quotes */
 
-/* Buffer lives in Parser_context in reentrant mode */
+/* Allocated length */
+static ulint stringbuf_len_alloc = 0;
+
+/* Current length */
+static ulint stringbuf_len = 0;
+
+/* Start of buffer */
+static char* stringbuf;
+
+static yyFlexLexer *pars_scanner{};
 
 /**
  * Appends a string to the buffer.
@@ -81,33 +87,40 @@ Created 12/14/1997 Heikki Tuuri
  * @param[in] str String to be appended
  * @param[in] len Length of string.
  */
-static void string_append(Parser_context* ctx, const char* str, ulint len) {
+static void string_append(const char* str, ulint len) {
 
-  (void) str;
-  (void) len;
+  // Disable compiler warning about unused variable.
+  (void) yyleng;
 
-  if (ctx->lex_stringbuf == NULL) {
-    ctx->lex_stringbuf = (char*) ut_new(1);
-    ctx->lex_stringbuf_len_alloc = 1;
+  if (stringbuf == NULL) {
+    stringbuf = (char*) ut_new(1);
+    stringbuf_len_alloc = 1;
   }
 
-  if (ctx->lex_stringbuf_len + len > ctx->lex_stringbuf_len_alloc) {
-    while (ctx->lex_stringbuf_len + len > ctx->lex_stringbuf_len_alloc) {
-      ctx->lex_stringbuf_len_alloc <<= 1;
+  if (stringbuf_len + len > stringbuf_len_alloc) {
+    while (stringbuf_len + len > stringbuf_len_alloc) {
+      stringbuf_len_alloc <<= 1;
     }
-    ctx->lex_stringbuf = (char*) ut_realloc(ctx->lex_stringbuf, ctx->lex_stringbuf_len_alloc);
+    stringbuf = (char*) ut_realloc(stringbuf, stringbuf_len_alloc);
   }
 
-  memcpy(ctx->lex_stringbuf + ctx->lex_stringbuf_len, str, len);
-  ctx->lex_stringbuf_len += len;
+  memcpy(stringbuf + stringbuf_len, str, len);
+  stringbuf_len += len;
 }
 
-void pars_lexer_var_init(Parser_context* /*ctx*/) {
-  /* no-op in reentrant mode; use Parser_context */
+void pars_lexer_var_init() {
+  stringbuf_len = 0;
+  stringbuf_len_alloc = 0;
+
+  if (stringbuf != NULL) {
+    ut_delete(stringbuf);
+    stringbuf = NULL;
+  }
 }
 
 void create_pars_scanner() {
- /* no-op in reentrant mode */
+ ut_a(pars_scanner == nullptr);
+ pars_scanner = new yyFlexLexer();
 }
 
 %}
@@ -123,7 +136,7 @@ BOUND_ID  \$[a-z_A-Z0-9]+
 %%
 
 {DIGIT}+  {
-      SET_YYLVAL(sym_tab_add_int_lit(CTX->sym_tab, atoi(YYText())));
+      yylval = sym_tab_add_int_lit(pars_sym_tab_global, atoi(YYText()));
       return(PARS_INT_LIT);
 }
 
@@ -136,13 +149,13 @@ BOUND_ID  \$[a-z_A-Z0-9]+
 {BOUND_LIT}  {
       ulint  type;
 
-      SET_YYLVAL(sym_tab_add_bound_lit(CTX->sym_tab, YYText() + 1, &type));
+      yylval = sym_tab_add_bound_lit(pars_sym_tab_global, YYText() + 1, &type);
 
       return((int) type);
 }
 
 {BOUND_ID}  {
-      SET_YYLVAL(sym_tab_add_bound_id(CTX->sym_tab, YYText() + 1));
+      yylval = sym_tab_add_bound_id(pars_sym_tab_global, YYText() + 1);
 
       return(PARS_ID_TOKEN);
 }
@@ -154,12 +167,12 @@ the scanned string is emptied upon encountering a starting quote.
 
 In the state 'quoted', only two actions are possible (defined below). */
       BEGIN(quoted);
-      CTX->lex_stringbuf_len = 0;
+      stringbuf_len = 0;
 }
 <quoted>[^\']+  {
       /* Got a sequence of characters other than "'":
       append to string buffer */
-      string_append(CTX, YYText(), YYLeng());
+      string_append(YYText(), YYLeng());
 }
 <quoted>"'"+  {
       /* Got a sequence of "'" characters:
@@ -168,7 +181,7 @@ In the state 'quoted', only two actions are possible (defined below). */
       We apply truncating division,
       so that "'''" will result in "'". */
 
-      string_append(CTX, YYText(), YYLeng() / 2);
+      string_append(YYText(), YYLeng() / 2);
 
       /* If we got an odd number of quotes, then the
       last quote we got is the terminating quote.
@@ -178,9 +191,9 @@ In the state 'quoted', only two actions are possible (defined below). */
 
       if (YYLeng() % 2) {
         BEGIN(INITIAL);
-        SET_YYLVAL(sym_tab_add_str_lit(
-          CTX->sym_tab,
-          (byte*) CTX->lex_stringbuf, CTX->lex_stringbuf_len));
+        yylval = sym_tab_add_str_lit(
+          pars_sym_tab_global,
+          (byte*) stringbuf, stringbuf_len);
         return(PARS_STR_LIT);
       }
 }
@@ -192,12 +205,12 @@ upon encountering a starting quote.
 
 In the state 'id', only two actions are possible (defined below). */
       BEGIN(id);
-      CTX->lex_stringbuf_len = 0;
+      stringbuf_len = 0;
 }
 <id>[^\"]+  {
       /* Got a sequence of characters other than '"':
       append to string buffer */
-      string_append(CTX, YYText(), YYLeng());
+      string_append(YYText(), YYLeng());
 }
 <id>\"+  {
       /* Got a sequence of '"' characters:
@@ -206,7 +219,7 @@ In the state 'id', only two actions are possible (defined below). */
       We apply truncating division,
       so that '"""' will result in '"'. */
 
-      string_append(CTX, YYText(), YYLeng() / 2);
+      string_append(YYText(), YYLeng() / 2);
 
       /* If we got an odd number of quotes, then the
       last quote we got is the terminating quote.
@@ -216,23 +229,23 @@ In the state 'id', only two actions are possible (defined below). */
 
       if (YYLeng() % 2) {
         BEGIN(INITIAL);
-        SET_YYLVAL(sym_tab_add_id(
-          CTX->sym_tab,
-          (byte*) CTX->lex_stringbuf, CTX->lex_stringbuf_len));
+        yylval = sym_tab_add_id(
+          pars_sym_tab_global,
+          (byte*) stringbuf, stringbuf_len);
 
         return(PARS_ID_TOKEN);
       }
 }
 
 "NULL"    {
-      SET_YYLVAL(sym_tab_add_null_lit(CTX->sym_tab));
+      yylval = sym_tab_add_null_lit(pars_sym_tab_global);
 
       return(PARS_NULL_LIT);
 }
 
 "SQL"    {
       /* Implicit cursor name */
-      SET_YYLVAL(sym_tab_add_str_lit(CTX->sym_tab, (byte*) YYText(), YYLeng()));
+      yylval = sym_tab_add_str_lit(pars_sym_tab_global, (byte*) YYText(), YYLeng());
       return(PARS_SQL_TOKEN);
 }
 
@@ -553,9 +566,9 @@ In the state 'id', only two actions are possible (defined below). */
 }
 
 {ID}    {
-      SET_YYLVAL(sym_tab_add_id(CTX->sym_tab,
+      yylval = sym_tab_add_id(pars_sym_tab_global,
               (byte*)YYText(),
-              strlen(YYText())));
+              strlen(YYText()));
       return(PARS_ID_TOKEN);
 }
 
@@ -672,17 +685,30 @@ In the state 'id', only two actions are possible (defined below). */
 }
 
 <<EOF>> {
-  pars_lexer_close(CTX);
+  pars_lexer_close();
   return 0;
 }
 
 %%
 
-/* reentrant yylex is defined via YY_DECL; no global yylex() wrapper */
+extern "C" int yylex() {
+  if (pars_scanner == nullptr) {
+    create_pars_scanner();
+  }
+  return pars_scanner->yylex();
+}
 
 /**
  * Release any resources used by the lexer.
  */
-void pars_lexer_close(Parser_context* /*ctx*/) {
-  /* no-op in reentrant mode; resources owned by Parser_context */
+void pars_lexer_close() {
+  delete pars_scanner;
+  pars_scanner = nullptr;
+
+  if (stringbuf != nullptr) {
+    free(stringbuf);
+    stringbuf = nullptr;
+  }
+
+  stringbuf_len_alloc = stringbuf_len = 0;
 }

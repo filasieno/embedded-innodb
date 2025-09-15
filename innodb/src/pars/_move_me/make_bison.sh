@@ -1,4 +1,4 @@
-#!/ bin / bash
+#!/bin/bash
 #
 #Copyright(c) 2006, 2009, Innobase Oy.All Rights Reserved.
 #

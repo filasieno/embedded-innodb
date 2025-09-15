@@ -27,7 +27,6 @@
             cmake
             ninja
             doxygen
-            flex
             bison
             pkg-config
             gtest
@@ -40,6 +39,7 @@
           buildInputs = [
             pkgs.liburing
             pkgs.liburing.dev
+            pkgs.flex
             bsThreadPoolPkg
           ];
           propagatedBuildInputs = [];
@@ -83,7 +83,7 @@
             '';
 
             installPhase = ''
-              ninja -C install
+              ninja -C build install
               # Expose compile_commands.json for editor tooling
               mkdir -p $out
               cp -f build/compile_commands.json $out/ || true

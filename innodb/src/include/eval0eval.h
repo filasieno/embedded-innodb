@@ -26,8 +26,7 @@ Created 12/29/1997 Heikki Tuuri
 #pragma once
 
 #include "innodb0types.h"
-
-#include "eval0eval.h"
+#include "que0types.h"
 #include "pars0grm.h"
 #include "pars0pars.h"
 #include "pars0sym.h"
