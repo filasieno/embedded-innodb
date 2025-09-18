@@ -33,6 +33,7 @@
             gbenchmark
             stdenv.cc
             graphviz
+            python3
           ];
 
           # Ensure .pc and headers for liburing are available in dev/build envs
@@ -42,6 +43,7 @@
             pkgs.flex
             bsThreadPoolPkg
           ];
+
           propagatedBuildInputs = [];
         in
         {
@@ -60,8 +62,11 @@
             version = "0.1";
             src = ./.;
 
-            nativeBuildInputs     = common.nativeBuildInputs;
-            buildInputs           = common.buildInputs;
+            nativeBuildInputs = common.nativeBuildInputs;
+            
+            buildInputs = common.buildInputs
+              ++ (with pkgs; [ ]);
+
             propagatedBuildInputs = common.propagatedBuildInputs;
 
             # Out-of-source build using Ninja; disable network-bound unit tests
@@ -118,6 +123,7 @@
               ++ (with pkgs; [
                 cmakeWithGui
                 ccache
+                luajit 
               ]);
 
             buildInputs = common.buildInputs;
@@ -139,6 +145,9 @@
               }
               function ib-build() {
                 ninja -C build -v
+              }
+              function ib-showpkgs() {
+                echo "lua.dev inc: ${pkgs.luajit}"
               }
             '';
           };
