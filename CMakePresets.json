@@ -1,0 +1,30 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 24
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "generator": "Ninja",
+            "binaryDir": "build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "debug-preset",
+            "inherits": "base",
+            "displayName": "Debug",
+            "cacheVariables": {
+                "ENABLE_UNIT_TESTING": "ON",
+                "ENABLE_INTEGRATION_TESTING": "ON",
+                "ENABLE_XA": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        { "name": "debug",   "configurePreset": "debug-preset" }
+    ]
+}

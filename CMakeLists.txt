@@ -24,6 +24,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED   ON)
 set(CMAKE_CXX_EXTENSIONS          OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
+
 # Objective: Centralize all binary outputs for predictable, clean build artifacts
 # - Static libraries in:   ${CMAKE_BINARY_DIR}/innodb/lib
 # - Shared libraries in:   ${CMAKE_BINARY_DIR}/innodb/lib
@@ -112,6 +114,9 @@ message(STATUS "IB_API_VERSION_STRING: " ${IB_API_VERSION_STRING})
 #
 # ---------------------------------------------------------------------------------------------------------------------
 
+
+
+
 # Build types: Debug (default) or Release
 if(NOT CMAKE_CONFIGURATION_TYPES)
   set(VALID_BUILD_TYPES Debug Release)
@@ -138,9 +143,20 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of
 # ---------------------------------------------------------------------------------------------------------------------
 # end Setup CI Build Matrix and Build options
 
+# Collect all options here
+option(ENABLE_GCOV                "Enable GCOV code coverage" OFF)
+option(ENABLE_UNIT_TESTING        "Enable Unit Tests"         ON)
+option(ENABLE_INTEGRATION_TESTING "Enable Integration Tests"  ON)
+option(ENABLE_XA                  "Enable XA"                 ON)
 
-
-
+# Report all options
+message(STATUS "CMAKE_CXX_COMPILER_ID               " ${CMAKE_CXX_COMPILER_ID})
+message(STATUS "CMAKE_CXX_COMPILER                  " ${CMAKE_CXX_COMPILER})
+message(STATUS "CMAKE_CXX_COMPILER_VERSION          " ${CMAKE_CXX_COMPILER_VERSION})
+message(STATUS "ENABLE_GCOV                         " ${ENABLE_GCOV})
+message(STATUS "ENABLE_UNIT_TESTING                 " ${ENABLE_UNIT_TESTING})
+message(STATUS "ENABLE_INTEGRATION_TESTING          " ${ENABLE_INTEGRATION_TESTING})
+message(STATUS "ENABLE_XA                           " ${ENABLE_XA})
 
 
 
@@ -317,6 +333,17 @@ function(innodb_module module_dir)
   set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${obj_tgt})
 
   set_target_properties(${obj_tgt} PROPERTIES FOLDER "innodb")
+  if(ENABLE_COVERAGE)
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+      message(WARNING "Coverage is best with Debug; current: ${CMAKE_BUILD_TYPE}")
+    endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+      target_compile_options(${obj_tgt} PRIVATE -O1 -g --coverage)
+    else()
+      message(FATAL_ERROR "Coverage: unsupported compiler ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+  endif()
+
 endfunction()
 
 # Register all modules
