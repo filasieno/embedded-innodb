@@ -17,10 +17,10 @@ Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include <gtest/gtest.h>
 
-#include <cstdint>
-
-#include "log0log.h"
 #include "ut0slst.h"
+
+// #include <cstdint>
+// #include "log0log.h"
 
 struct TestNode {
   ut_slist_node<TestNode> m_node;

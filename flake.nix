@@ -131,7 +131,7 @@
             shellHook = ''
               export PROJECT_ROOT=$(git rev-parse --show-toplevel)
               export PKG_CONFIG_PATH=${pcPaths}:$PKG_CONFIG_PATH
-              export PATH=$PROJECT_ROOT/build/tests/bin:$PATH
+              export PATH=$PROJECT_ROOT/build/tests/bin:$PROJECT_ROOT/build/unit_tests/bin/:$PATH
 
               # Bold yellow project segment, then green user@host:cwd
               
@@ -149,6 +149,64 @@
               function ib-showpkgs() {
                 echo "lua.dev inc: ${pkgs.luajit}"
               }
+
+              function ib-run-tests() {
+                itest_cfg
+                itest_cursor
+                itest_ddl
+                itest_deadlock
+                itest_dict
+                itest_dict-2
+                itest_drop
+                itest_index
+                itest_logger
+                itest_mt_stress
+                itest_parallel_reader
+                itest_perf1
+                itest_recover
+                itest_search
+                itest_shutdown
+                itest_status
+                itest_tablename
+                itest_test1
+                itest_test2
+                itest_test3
+                itest_test5
+                itest_types
+                itest_update
+              }
+
+              function ib-run-utests() {
+                utest_api
+                utest_btr
+                utest_buf
+                utest_data
+                utest_ddl
+                utest_dict
+                utest_dyn
+                utest_eval
+                utest_fil
+                utest_fsp
+                utest_fut
+                utest_lock
+                utest_log
+                utest_mach
+                utest_mem
+                utest_mtr
+                utest_os
+                utest_page
+                utest_pars
+                utest_que
+                utest_read
+                utest_rem
+                utest_row
+                utest_srv
+                utest_sync
+                utest_trx
+                utest_usr
+                utest_ut
+              }
+
             '';
           };
         });
