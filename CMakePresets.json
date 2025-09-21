@@ -14,17 +14,19 @@
             }
         },
         {
-            "name": "debug-preset",
+            "name": "debug",
             "inherits": "base",
             "displayName": "Debug",
             "cacheVariables": {
-                "ENABLE_UNIT_TESTING": "ON",
+                "ENABLE_UNIT_TESTING":        "ON",
                 "ENABLE_INTEGRATION_TESTING": "ON",
-                "ENABLE_XA": "ON"
+                "ENABLE_XA":                  "OFF",
+                "ENABLE_GCOV":                "ON",
+                "ENABLE_INNODB_LUA":          "OFF"
             }
         }
     ],
     "buildPresets": [
-        { "name": "debug",   "configurePreset": "debug-preset" }
+        { "name": "debug",   "configurePreset": "debug" }
     ]
 }

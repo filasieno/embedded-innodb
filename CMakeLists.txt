@@ -144,10 +144,11 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of
 # end Setup CI Build Matrix and Build options
 
 # Collect all options here
-option(ENABLE_GCOV                "Enable GCOV code coverage" OFF)
-option(ENABLE_UNIT_TESTING        "Enable Unit Tests"         ON)
-option(ENABLE_INTEGRATION_TESTING "Enable Integration Tests"  ON)
-option(ENABLE_XA                  "Enable XA"                 ON)
+option(ENABLE_GCOV                "Enable GCOV code coverage"  OFF)
+option(ENABLE_UNIT_TESTING        "Enable Unit Tests"          ON)
+option(ENABLE_INTEGRATION_TESTING "Enable Integration Tests"   ON)
+option(ENABLE_XA                  "Enable XA"                  ON)
+option(ENABLE_INNODB_LUA          "Enable InnoDB LUA Bindings" ON)
 
 # Report all options
 message(STATUS "CMAKE_CXX_COMPILER_ID               " ${CMAKE_CXX_COMPILER_ID})
@@ -157,9 +158,7 @@ message(STATUS "ENABLE_GCOV                         " ${ENABLE_GCOV})
 message(STATUS "ENABLE_UNIT_TESTING                 " ${ENABLE_UNIT_TESTING})
 message(STATUS "ENABLE_INTEGRATION_TESTING          " ${ENABLE_INTEGRATION_TESTING})
 message(STATUS "ENABLE_XA                           " ${ENABLE_XA})
-
-
-
+message(STATUS "ENABLE_INNODB_LUA                   " ${ENABLE_INNODB_LUA})
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Configuration checks (to generate ib0config.h)
@@ -301,6 +300,7 @@ set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS innodb_sql)
 #
 # ---------------------------------------------------------------------------------------------------------------------
 function(innodb_module module_dir)
+
   # Step 1 — Gather sources for this module
   file(GLOB module_sources CONFIGURE_DEPENDS 
     "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}/*.cc")
@@ -333,18 +333,21 @@ function(innodb_module module_dir)
   set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${obj_tgt})
 
   set_target_properties(${obj_tgt} PROPERTIES FOLDER "innodb")
-  if(ENABLE_COVERAGE)
-    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-      message(WARNING "Coverage is best with Debug; current: ${CMAKE_BUILD_TYPE}")
-    endif()
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-      target_compile_options(${obj_tgt} PRIVATE -O1 -g --coverage)
+  if(ENABLE_GCOV)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+      if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(WARNING "Coverage is best with Debug; current: ${CMAKE_BUILD_TYPE}")
+      endif()
+      target_compile_options(${obj_tgt} PRIVATE -O0 -g --coverage)
+      target_link_options(${obj_tgt} PRIVATE --coverage)
+      message(STATUS "coverage flags enabled for ${obj_tgt}")
     else()
       message(FATAL_ERROR "Coverage: unsupported compiler ${CMAKE_CXX_COMPILER_ID}")
     endif()
   endif()
 
-endfunction()
+endfunction() 
+# end `innodb_module(module_dir)` function
 
 # Register all modules
 innodb_module("ut")
@@ -579,12 +582,56 @@ add_executable(utest $<TARGET_OBJECTS:unit_test_common> ${UNIT_TEST_ALL_OBJECTS}
 target_include_directories(utest PRIVATE ${UNIT_TEST_COMMON_INCLUDES})
 target_compile_definitions(utest PRIVATE UNIV_BTR_PRINT UNIT_TESTING)
 target_link_libraries(utest PRIVATE unit_test_common ${unit_test_common_libs} innodb_pch)
+if(ENABLE_GCOV)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_link_options(utest PRIVATE --coverage)
+  endif()
+endif()
 add_dependencies(utest innodb_pch_build)
 target_compile_options(utest PRIVATE -Winvalid-pch -include ${PCH_HEADER})
 set_target_properties(utest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin)
 set_target_properties(utest PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
-add_test(NAME utest COMMAND utest)
 
+include(CTest)
+include(GoogleTest)
+
+gtest_discover_tests(utest
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin
+  DISCOVERY_TIMEOUT 30
+  PROPERTIES
+    LABELS "unit"
+    TIMEOUT 120
+  XML_OUTPUT_DIR ${CMAKE_BINARY_DIR}/test-results/unit
+)
+
+# Convenience target: generate gcovr HTML and XML reports after tests
+if(ENABLE_GCOV)
+  find_program(GCOVR_BIN gcovr)
+  if(GCOVR_BIN)
+    set(COVERAGE_DIR ${CMAKE_BINARY_DIR}/build/innodb/coverage)
+    add_custom_target(coverage
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${COVERAGE_DIR}
+      COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} --output-on-failure
+      COMMAND ${GCOVR_BIN}
+              -r ${CMAKE_SOURCE_DIR}
+              ${CMAKE_BINARY_DIR}
+              --exclude '.*tests/.*'
+              --exclude '.*unit-tests/.*'
+              --xml -o ${COVERAGE_DIR}/coverage.xml
+      COMMAND ${GCOVR_BIN}
+              -r ${CMAKE_SOURCE_DIR}
+              ${CMAKE_BINARY_DIR}
+              --exclude '.*tests/.*'
+              --exclude '.*unit-tests/.*'
+              --html --html-details -o ${COVERAGE_DIR}/coverage.html
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      COMMENT "Running tests and generating coverage report with gcovr"
+      VERBATIM
+    )
+  else()
+    message(STATUS "gcovr not found; 'coverage' target will not be available")
+  endif()
+endif()
 # ---------------------------------------------------------------------------------------------------------------------
 # Integration test setup section
 # ---------------------------------------------------------------------------------------------------------------------
@@ -625,6 +672,9 @@ function(innodb_integration_test executable_name main_src_file)
   target_compile_options(${executable_name} PRIVATE -Winvalid-pch -include ${PCH_HEADER})
   set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/bin)
   set_target_properties(${executable_name} PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
+  if(ENABLE_GCOV)
+    target_link_libraries(${executable_name} PRIVATE gcov)
+  endif()
 endfunction()
 
 
@@ -662,12 +712,3 @@ innodb_integration_test( itest_parallel_reader   ib_parallel_reader.cc          
 innodb_integration_test( itest_deadlock          ib_deadlock.cc                                 )
 innodb_integration_test( itest_mt_stress         ib_mt_stress.cc                                )
 innodb_integration_test( itest_perf1             ib_perf1.cc                                    )
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Unit tests configuration
-# ---------------------------------------------------------------------------------------------------------------------
-#
-#
-#
-#
-# ---------------------------------------------------------------------------------------------------------------------

@@ -34,6 +34,8 @@
             stdenv.cc
             graphviz
             python3
+            gcovr
+            lcov
           ];
 
           # Ensure .pc and headers for liburing are available in dev/build envs
@@ -78,7 +80,8 @@
                 -DCMAKE_INSTALL_PREFIX=$out \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -DUNIT_TESTING=ON \
-                -DDISABLE_XA=OFF
+                -DDISABLE_XA=OFF \
+                -DENABLE_GCOV=ON
             '';
 
             doCheck = false;
@@ -124,6 +127,8 @@
                 cmakeWithGui
                 ccache
                 luajit 
+                gcovr
+                lcov
               ]);
 
             buildInputs = common.buildInputs;
@@ -140,73 +145,10 @@
               RESET="\[\e[0m\]"
               export PS1="$YELLOW_BOLD(embedded-innodb)$RESET $GREEN[\u@\h:\w]\$$RESET "
 
-              function ib-configure() {
-                cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX="$PWD/build/out" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUNIT_TESTING=ON -DDISABLE_XA=OFF
-              }
-              function ib-build() {
-                ninja -C build -v
-              }
+              source $PROJECT_ROOT/scripts/env.sh
               function ib-showpkgs() {
-                echo "lua.dev inc: ${pkgs.luajit}"
+                 echo "lua.dev inc: ${pkgs.luajit}"
               }
-
-              function ib-run-tests() {
-                itest_cfg
-                itest_cursor
-                itest_ddl
-                itest_deadlock
-                itest_dict
-                itest_dict-2
-                itest_drop
-                itest_index
-                itest_logger
-                itest_mt_stress
-                itest_parallel_reader
-                itest_perf1
-                itest_recover
-                itest_search
-                itest_shutdown
-                itest_status
-                itest_tablename
-                itest_test1
-                itest_test2
-                itest_test3
-                itest_test5
-                itest_types
-                itest_update
-              }
-
-              function ib-run-utests() {
-                utest_api
-                utest_btr
-                utest_buf
-                utest_data
-                utest_ddl
-                utest_dict
-                utest_dyn
-                utest_eval
-                utest_fil
-                utest_fsp
-                utest_fut
-                utest_lock
-                utest_log
-                utest_mach
-                utest_mem
-                utest_mtr
-                utest_os
-                utest_page
-                utest_pars
-                utest_que
-                utest_read
-                utest_rem
-                utest_row
-                utest_srv
-                utest_sync
-                utest_trx
-                utest_usr
-                utest_ut
-              }
-
             '';
           };
         });
