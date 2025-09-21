@@ -13,7 +13,7 @@
 [] setup clang coverage
 [] setup gcc   coverage
 [] setup gcc   coverage report
-[] setup nix clang devshell
+[] setup nix clang devshell + gcc devshell + default link
 
 
 ## Target physical Architecture
