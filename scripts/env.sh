@@ -122,8 +122,8 @@ function ib-cov() {
         [[ $RUN_TESTS -eq 1 ]] && ctest --test-dir "$BUILD_DIR" --output-on-failure | cat
         gcovr -r "$PROJECT_ROOT" \
             --object-directory "$BUILD_DIR" \
-        --exclude '.*tests/.*' \
-        --exclude '.*unit-tests/.*' \
+            --exclude '.*tests/.*' \
+            --exclude '.*unit-tests/.*' \
             --xml -o "$OUT_DIR/coverage.xml" \
             --html "$OUT_DIR/coverage-index.html" \
             --html-details -o "$OUT_DIR/coverage-details.html"

@@ -129,6 +129,7 @@
                 luajit 
                 gcovr
                 lcov
+                sysbench
               ]);
 
             buildInputs = common.buildInputs;
