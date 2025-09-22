@@ -24,14 +24,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED   ON)
 set(CMAKE_CXX_EXTENSIONS          OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
-  add_custom_target(export_compile_commands ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_BINARY_DIR}/compile_commands.json
-            ${CMAKE_SOURCE_DIR}/build/compile_commands.json
-    BYPRODUCTS ${CMAKE_SOURCE_DIR}/build/compile_commands.json
-    COMMENT "Copy compile_commands.json to source-root build/"
-    VERBATIM)
+    add_custom_target(export_compile_commands ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${CMAKE_BINARY_DIR}/compile_commands.json
+                ${CMAKE_SOURCE_DIR}/build/compile_commands.json
+        BYPRODUCTS ${CMAKE_SOURCE_DIR}/build/compile_commands.json
+        COMMENT "Copy compile_commands.json to source-root build/"
+        VERBATIM
+    )
 endif()
 
 
@@ -55,8 +56,8 @@ pkg_check_modules(LIBURING       IMPORTED_TARGET liburing)
 # OptionalL if available use `ccache`
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
-  set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
-  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
 endif()
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -128,11 +129,11 @@ message(STATUS "IB_API_VERSION_STRING: " ${IB_API_VERSION_STRING})
 
 # Build types: Debug (default) or Release
 if(NOT CMAKE_CONFIGURATION_TYPES)
-  set(VALID_BUILD_TYPES Debug Release)
-  if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-  endif()
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${VALID_BUILD_TYPES})
+    set(VALID_BUILD_TYPES Debug Release)
+    if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+        set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+    endif()
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${VALID_BUILD_TYPES})
 endif()
 
 
@@ -140,8 +141,8 @@ endif()
 
 
 # Platform defines
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-  add_definitions(-DUNIV_LINUX)
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")   
+    add_definitions(-DUNIV_LINUX)
 endif()
 
 # Define UNIV_DEBUG on Debug builds
@@ -154,11 +155,11 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of
 # - Some environments enable fortify by default; it requires -O1 or higher.
 # - In Debug and when coverage forces -O0, force _FORTIFY_SOURCE to 0 at the end of flags.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
-  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ENABLE_GCOV)
-    set(FORTIFY_OFF_FLAGS "-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0")
-    set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${FORTIFY_OFF_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FORTIFY_OFF_FLAGS}")
-  endif()
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ENABLE_GCOV)
+        set(FORTIFY_OFF_FLAGS "-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0")
+        set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${FORTIFY_OFF_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FORTIFY_OFF_FLAGS}")
+    endif()
 endif()
 # ---------------------------------------------------------------------------------------------------------------------
 # end Setup CI Build Matrix and Build options
@@ -220,8 +221,8 @@ check_include_files("stdint.h"            HAVE_STDINT_H)
 # Objective: Generate configuration header used by sources during compilation
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
 configure_file(
-  ${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
-  ${CMAKE_BINARY_DIR}/include/ib0config.h
+    ${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
+    ${CMAKE_BINARY_DIR}/include/ib0config.h
 )
 
 # Objective: Define a single PCH target to be reused by all module/object/static targets
@@ -230,12 +231,12 @@ add_library(innodb_pch INTERFACE)
 
 # Propagate common include directories and compile definitions via innodb_pch
 target_include_directories(innodb_pch INTERFACE
-  ${CMAKE_SOURCE_DIR}/innodb/src/include
-  ${CMAKE_SOURCE_DIR}/innodb/include
-  ${CMAKE_BINARY_DIR}/include
-  ${BS_THREAD_POOL_INCLUDE_DIRS}
-  ${LIBURING_INCLUDE_DIRS}
-  ${FLEX_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/innodb/src/include
+    ${CMAKE_SOURCE_DIR}/innodb/include
+    ${CMAKE_BINARY_DIR}/include
+    ${BS_THREAD_POOL_INCLUDE_DIRS}
+    ${LIBURING_INCLUDE_DIRS}
+    ${FLEX_INCLUDE_DIR}
 )
 target_compile_definitions(innodb_pch INTERFACE
   $<$<CONFIG:Debug>:UNIV_DEBUG>
@@ -244,90 +245,18 @@ target_compile_definitions(innodb_pch INTERFACE
 
 # Propagate liburing feature macro to all targets consuming the PCH
 if(LIBURING_FOUND)
-  target_compile_definitions(innodb_pch INTERFACE HAVE_LIBURING)
+    target_compile_definitions(innodb_pch INTERFACE HAVE_LIBURING)
 endif()
 
-# Build a single PCH once and reuse (-include) across all compilations
-set(PCH_HEADER_SRC ${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h)
-set(PCH_DIR        ${CMAKE_BINARY_DIR}/pch)
-set(PCH_HEADER     ${PCH_DIR}/innodb_pch.h)
-set(PCH_GCH        ${PCH_DIR}/innodb_pch.h.gch)
+# Build PCH using CMake's native support so each consumer compiles with identical flags
+target_precompile_headers(innodb_pch INTERFACE ${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h)
 
-set(PCH_INCLUDE_FLAGS)
-foreach(_dir ${CMAKE_SOURCE_DIR}/innodb/src/include ${CMAKE_SOURCE_DIR}/innodb/include ${CMAKE_BINARY_DIR}/include ${BS_THREAD_POOL_INCLUDE_DIRS} ${LIBURING_INCLUDE_DIRS})
-  list(APPEND PCH_INCLUDE_FLAGS -I${_dir})
-endforeach()
-
-set(PCH_DEBUG_DEF)
-set(PCH_DEBUG_FLAGS)
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(PCH_DEBUG_DEF -DUNIV_DEBUG)
-  set(PCH_DEBUG_FLAGS -g)
-endif()
-
-# Build PCH with the same effective compiler flags as other compilations
-set(PCH_CXX_FLAGS_LIST)
-
-# Base CMake flags
-set(_PCH_BASE_FLAGS "${CMAKE_CXX_FLAGS}")
-separate_arguments(_PCH_BASE_FLAGS_LIST UNIX_COMMAND "${_PCH_BASE_FLAGS}")
-list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_BASE_FLAGS_LIST})
-
-# Debug-specific flags
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(_PCH_DEBUG_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}")
-  separate_arguments(_PCH_DEBUG_FLAGS_LIST UNIX_COMMAND "${_PCH_DEBUG_FLAGS}")
-  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_DEBUG_FLAGS_LIST})
-endif()
-
-# Coverage flags when enabled
-if(ENABLE_GCOV)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    list(APPEND PCH_CXX_FLAGS_LIST -O0 -g --coverage)
-  endif()
-endif()
-
-# Include environment-provided flags to match wrapper/toolchain (e.g. Nix wrappers)
-if(DEFINED ENV{CPPFLAGS})
-  set(_PCH_ENV_CPP "$ENV{CPPFLAGS}")
-  separate_arguments(_PCH_ENV_CPP_LIST UNIX_COMMAND "${_PCH_ENV_CPP}")
-  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_CPP_LIST})
-endif()
-if(DEFINED ENV{CXXFLAGS})
-  set(_PCH_ENV_CXX "$ENV{CXXFLAGS}")
-  separate_arguments(_PCH_ENV_CXX_LIST UNIX_COMMAND "${_PCH_ENV_CXX}")
-  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_CXX_LIST})
-endif()
-if(DEFINED ENV{NIX_CFLAGS_COMPILE})
-  set(_PCH_ENV_NIX "$ENV{NIX_CFLAGS_COMPILE}")
-  separate_arguments(_PCH_ENV_NIX_LIST UNIX_COMMAND "${_PCH_ENV_NIX}")
-  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_NIX_LIST})
-endif()
-
-# Ensure fortify is disabled last in Debug/coverage for GCC
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
-  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ENABLE_GCOV)
-    list(APPEND PCH_CXX_FLAGS_LIST -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0)
-  endif()
-endif()
-
-# Silence preprocessor #warning lines in PCH build (glibc fortify message)
-list(APPEND PCH_CXX_FLAGS_LIST -Wno-cpp)
-
-set(PCH_FEATURE_DEFS)
-if(LIBURING_FOUND)
-  set(PCH_FEATURE_DEFS -DHAVE_LIBURING)
-endif()
-
-add_custom_command(OUTPUT ${PCH_GCH}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PCH_DIR}
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PCH_HEADER_SRC} ${PCH_HEADER}
-  COMMAND ${CMAKE_CXX_COMPILER} -x c++-header -std=c++23 -DUNIV_LINUX ${PCH_FEATURE_DEFS} ${PCH_DEBUG_DEF} ${PCH_DEBUG_FLAGS} ${PCH_INCLUDE_FLAGS} ${PCH_CXX_FLAGS_LIST} -o ${PCH_GCH} ${PCH_HEADER}
-  DEPENDS ${PCH_HEADER_SRC}
-  VERBATIM)
-
-add_custom_target(innodb_pch_build ALL DEPENDS ${PCH_GCH})
-set_target_properties(innodb_pch_build PROPERTIES FOLDER "innodb")
+# Silence glibc fortify #warning and disable fortify in Debug/coverage builds
+target_compile_options(innodb_pch INTERFACE
+  $<$<OR:$<CONFIG:Debug>,$<BOOL:${ENABLE_GCOV}>>:-Wno-cpp>
+  $<$<OR:$<CONFIG:Debug>,$<BOOL:${ENABLE_GCOV}>>:-U_FORTIFY_SOURCE>
+  $<$<OR:$<CONFIG:Debug>,$<BOOL:${ENABLE_GCOV}>>:-D_FORTIFY_SOURCE=0>
+)
 
 
 # Include Flex and Bison CMake modules
@@ -376,63 +305,60 @@ set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS innodb_sql)
 # ---------------------------------------------------------------------------------------------------------------------
 function(innodb_module module_dir)
 
-  # Step 1 — Gather sources for this module
-  file(GLOB module_sources CONFIGURE_DEPENDS 
+    # Step 1 — Gather sources for this module
+    file(GLOB module_sources CONFIGURE_DEPENDS 
     "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}/*.cc")
 
-  # # Exclude legacy monolithic file when modular sources exist to avoid duplicates
-  # if(module_dir STREQUAL "log")
-  #   # Exclude legacy monolithic implementation to avoid duplicate symbols
-  #   list(FILTER module_sources EXCLUDE REGEX ".*/log0log\\.cc$")
-  #   # Use canonical recovery implementation from log0recv.cc; exclude temporary split duplicates
-  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_recovery\\.cc$")
-  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_globals\\.cc$")
-  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_parse\\.cc$")
-  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_scan\\.cc$")
-  # endif()
+    # # Exclude legacy monolithic file when modular sources exist to avoid duplicates
+    # if(module_dir STREQUAL "log")
+    #   # Exclude legacy monolithic implementation to avoid duplicate symbols
+    #   list(FILTER module_sources EXCLUDE REGEX ".*/log0log\\.cc$")
+    #   # Use canonical recovery implementation from log0recv.cc; exclude temporary split duplicates
+    #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_recovery\\.cc$")
+    #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_globals\\.cc$")
+    #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_parse\\.cc$")
+    #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_scan\\.cc$")
+    # endif()
 
-  # Step 2 — Define per-module OBJECT target (single compilation point for the module)
-  set(obj_tgt    "mod_${module_dir}")
+    # Step 2 — Define per-module OBJECT target (single compilation point for the module)
+    set(obj_tgt "mod_${module_dir}")
 
-  if(module_sources STREQUAL "")
-    add_library(${obj_tgt} OBJECT)
-  else()
-    add_library(${obj_tgt} OBJECT ${module_sources})
-  endif()
-  target_compile_features(${obj_tgt} PRIVATE cxx_std_23)
-  target_compile_options(${obj_tgt} PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
-  target_include_directories(${obj_tgt}
-    PRIVATE
-      ${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}
-      ${CMAKE_SOURCE_DIR}/innodb/src/include
-      ${CMAKE_SOURCE_DIR}/innodb/include
-      ${CMAKE_BINARY_DIR}/include
-      ${BS_THREAD_POOL_INCLUDE_DIRS}
-      ${LIBURING_INCLUDE_DIRS}
-  )
-  target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
-  # Reuse the single PCH across all compilations
-  add_dependencies(${obj_tgt} innodb_pch_build)
-  target_compile_options(${obj_tgt} PRIVATE -include ${PCH_HEADER})
-  # Ensure position independent code so objects can link into shared libs
-  set_target_properties(${obj_tgt} PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-  # Step 3 — Register object target for the final aggregated library
-  set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${obj_tgt})
-
-  set_target_properties(${obj_tgt} PROPERTIES FOLDER "innodb")
-  if(ENABLE_GCOV)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-      if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-        message(WARNING "Coverage is best with Debug; current: ${CMAKE_BUILD_TYPE}")
-      endif()
-      target_compile_options(${obj_tgt} PRIVATE -O0 -g --coverage)
-      target_link_options(${obj_tgt} PRIVATE --coverage)
-      message(STATUS "coverage flags enabled for ${obj_tgt}")
+    if(module_sources STREQUAL "")
+        add_library(${obj_tgt} OBJECT)
     else()
-      message(FATAL_ERROR "Coverage: unsupported compiler ${CMAKE_CXX_COMPILER_ID}")
+        add_library(${obj_tgt} OBJECT ${module_sources})
     endif()
-  endif()
+    target_compile_features(${obj_tgt} PRIVATE cxx_std_23)
+    target_compile_options(${obj_tgt} PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
+    target_include_directories(${obj_tgt}
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}
+        ${CMAKE_SOURCE_DIR}/innodb/src/include
+        ${CMAKE_SOURCE_DIR}/innodb/include
+        ${CMAKE_BINARY_DIR}/include
+        ${BS_THREAD_POOL_INCLUDE_DIRS}
+        ${LIBURING_INCLUDE_DIRS}
+    )
+    target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
+    # Ensure position independent code so objects can link into shared libs
+    set_target_properties(${obj_tgt} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+    # Step 3 — Register object target for the final aggregated library
+    set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${obj_tgt})
+
+    set_target_properties(${obj_tgt} PROPERTIES FOLDER "innodb")
+    if(ENABLE_GCOV)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+                message(WARNING "Coverage is best with Debug; current: ${CMAKE_BUILD_TYPE}")
+            endif()
+            target_compile_options(${obj_tgt} PRIVATE -O0 -g --coverage)
+            target_link_options(${obj_tgt} PRIVATE --coverage)
+            message(STATUS "coverage flags enabled for ${obj_tgt}")
+        else()
+            message(FATAL_ERROR "Coverage: unsupported compiler ${CMAKE_CXX_COMPILER_ID}")
+        endif()
+    endif()
 
 endfunction() 
 # end `innodb_module(module_dir)` function
@@ -445,6 +371,8 @@ innodb_module("mem")
 innodb_module("sync")
 innodb_module("fut")
 innodb_module("log")
+# Ensure runtime log globals are compiled into the log module to satisfy references from other modules
+target_sources(mod_log PRIVATE ${CMAKE_SOURCE_DIR}/innodb/src/log/log_runtime.cc)
 innodb_module("fil")
 innodb_module("fsp")
 innodb_module("buf")
@@ -474,7 +402,7 @@ get_property(INNODB_OBJ_TARGETS GLOBAL PROPERTY INNODB_OBJ_TARGETS)
 # Expand objects from all modules
 set(INNODB_ALL_OBJECTS)
 foreach(obj_tgt IN LISTS INNODB_OBJ_TARGETS)
-  list(APPEND INNODB_ALL_OBJECTS $<TARGET_OBJECTS:${obj_tgt}>)
+    list(APPEND INNODB_ALL_OBJECTS $<TARGET_OBJECTS:${obj_tgt}>)
 endforeach()
 
 # Objective: Build the final monolithic static library from every module's objects
@@ -493,8 +421,8 @@ target_include_directories(innodb PRIVATE
 )
 
 if(LIBURING_FOUND)
-  target_link_libraries(innodb PUBLIC PkgConfig::LIBURING)
-  target_compile_definitions(innodb PUBLIC HAVE_LIBURING)
+    target_link_libraries(innodb PUBLIC PkgConfig::LIBURING)
+    target_compile_definitions(innodb PUBLIC HAVE_LIBURING)
 endif()
 
 # Build a shared library from the same object files
@@ -510,8 +438,8 @@ target_include_directories(innodb_shared PRIVATE
   ${LIBURING_INCLUDE_DIRS}
 )
 if(LIBURING_FOUND)
-  target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
-  target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)
+    target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
+    target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)
 endif()
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -541,11 +469,11 @@ endif()
 # ---------------------------------------------------------------------------------------------------------------------
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
-  set(DOXYGEN_PROJECT_NAME       "Embedded InnoDB")
-  set(DOXYGEN_GENERATE_HTML      YES)
-  set(DOXYGEN_GENERATE_LATEX     NO)
-  set(DOXYGEN_RECURSIVE          YES)
-  set(DOXYGEN_OUTPUT_DIRECTORY   "${CMAKE_BINARY_DIR}/docs")
+    set(DOXYGEN_PROJECT_NAME       "Embedded InnoDB")
+    set(DOXYGEN_GENERATE_HTML      YES)
+    set(DOXYGEN_GENERATE_LATEX     NO)
+    set(DOXYGEN_RECURSIVE          YES)
+    set(DOXYGEN_OUTPUT_DIRECTORY   "${CMAKE_BINARY_DIR}/docs")
 endif()
 
 
@@ -569,8 +497,8 @@ endif()
 #
 # ---------------------------------------------------------------------------------------------------------------------
 install(TARGETS innodb innodb_shared
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
 )
 install(FILES ${CMAKE_SOURCE_DIR}/innodb/include/innodb.h DESTINATION include)
 
@@ -605,13 +533,11 @@ find_package(GTest REQUIRED)
 # Ensure GTest headers are visible when compiling unit-test OBJECT libraries
 get_target_property(GTEST_INCLUDE_DIRS GTest::gtest INTERFACE_INCLUDE_DIRECTORIES)
 if(GTEST_INCLUDE_DIRS)
-  list(APPEND UNIT_TEST_COMMON_INCLUDES ${GTEST_INCLUDE_DIRS})
+    list(APPEND UNIT_TEST_COMMON_INCLUDES ${GTEST_INCLUDE_DIRS})
 endif()
 
-# Reuse library PCH for unit test common objects
-add_dependencies(unit_test_common innodb_pch_build)
+# Reuse library PCH for unit test common objects (native CMake PCH)
 target_link_libraries(unit_test_common PRIVATE innodb_pch)
-target_compile_options(unit_test_common PRIVATE -include ${PCH_HEADER})
 
 function(innodb_gtest executable_name utest_folder)
     # Gather sources for this unit-test module
@@ -619,23 +545,21 @@ function(innodb_gtest executable_name utest_folder)
 
     # If liburing is absent, drop any io_uring-specific tests from this module
     if(NOT LIBURING_FOUND)
-      list(FILTER unit_test_sources EXCLUDE REGEX ".*/log_io_uring\\.cc$")
+        list(FILTER unit_test_sources EXCLUDE REGEX ".*/log_io_uring\\.cc$")
     endif()
 
     # Create an OBJECT library for the module's tests
     set(obj_tgt "ut_obj_${executable_name}")
     if(unit_test_sources STREQUAL "")
-      add_library(${obj_tgt} OBJECT)
+        add_library(${obj_tgt} OBJECT)
     else()
-      add_library(${obj_tgt} OBJECT ${unit_test_sources})
+        add_library(${obj_tgt} OBJECT ${unit_test_sources})
     endif()
 
     target_include_directories(${obj_tgt} PRIVATE ${UNIT_TEST_COMMON_INCLUDES} "${UNIT_TEST_SOURCE_DIR}/${utest_folder}")
     target_compile_definitions(${obj_tgt} PRIVATE UNIV_BTR_PRINT UNIT_TESTING)
     # Reuse the library PCH for all unit-test module compilations
-    add_dependencies(${obj_tgt} innodb_pch_build)
     target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
-    target_compile_options(${obj_tgt} PRIVATE -include ${PCH_HEADER})
     set_target_properties(${obj_tgt} PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
     # Register the object target for aggregation later
@@ -680,7 +604,7 @@ innodb_gtest( utest_sync              modules/sync      )
 get_property(UNIT_TEST_OBJ_TARGETS GLOBAL PROPERTY UNIT_TEST_OBJ_TARGETS)
 set(UNIT_TEST_ALL_OBJECTS)
 foreach(obj_tgt IN LISTS UNIT_TEST_OBJ_TARGETS)
-  list(APPEND UNIT_TEST_ALL_OBJECTS $<TARGET_OBJECTS:${obj_tgt}>)
+    list(APPEND UNIT_TEST_ALL_OBJECTS $<TARGET_OBJECTS:${obj_tgt}>)
 endforeach()
 
 add_executable(utest $<TARGET_OBJECTS:unit_test_common> ${UNIT_TEST_ALL_OBJECTS})
@@ -688,12 +612,11 @@ target_include_directories(utest PRIVATE ${UNIT_TEST_COMMON_INCLUDES})
 target_compile_definitions(utest PRIVATE UNIV_BTR_PRINT UNIT_TESTING)
 target_link_libraries(utest PRIVATE unit_test_common ${unit_test_common_libs} innodb_pch)
 if(ENABLE_GCOV)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_link_options(utest PRIVATE --coverage)
-  endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_link_options(utest PRIVATE --coverage)
+    endif()
 endif()
-add_dependencies(utest innodb_pch_build)
-target_compile_options(utest PRIVATE -include ${PCH_HEADER})
+target_link_libraries(utest PRIVATE innodb_pch)
 set_target_properties(utest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin)
 set_target_properties(utest PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
@@ -701,41 +624,41 @@ include(CTest)
 include(GoogleTest)
 
 gtest_discover_tests(utest
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin
-  DISCOVERY_TIMEOUT 30
-  PROPERTIES
-    LABELS "unit"
-    TIMEOUT 120
-  XML_OUTPUT_DIR ${CMAKE_BINARY_DIR}/test-results/unit
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin
+    DISCOVERY_TIMEOUT 30
+    PROPERTIES
+        LABELS "unit"
+        TIMEOUT 120
+    XML_OUTPUT_DIR ${CMAKE_BINARY_DIR}/test-results/unit
 )
 
 # Convenience target: generate gcovr HTML and XML reports after tests
 if(ENABLE_GCOV)
-  find_program(GCOVR_BIN gcovr)
-  if(GCOVR_BIN)
-    set(COVERAGE_DIR ${CMAKE_BINARY_DIR}/build/innodb/coverage)
-    add_custom_target(coverage
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${COVERAGE_DIR}
-      COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} --output-on-failure
-      COMMAND ${GCOVR_BIN}
-              -r ${CMAKE_SOURCE_DIR}
-              ${CMAKE_BINARY_DIR}
-              --exclude '.*tests/.*'
-              --exclude '.*unit-tests/.*'
-              --xml -o ${COVERAGE_DIR}/coverage.xml
-      COMMAND ${GCOVR_BIN}
-              -r ${CMAKE_SOURCE_DIR}
-              ${CMAKE_BINARY_DIR}
-              --exclude '.*tests/.*'
-              --exclude '.*unit-tests/.*'
-              --html --html-details -o ${COVERAGE_DIR}/coverage.html
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      COMMENT "Running tests and generating coverage report with gcovr"
-      VERBATIM
-    )
-  else()
-    message(STATUS "gcovr not found; 'coverage' target will not be available")
-  endif()
+    find_program(GCOVR_BIN gcovr)
+    if(GCOVR_BIN)
+        set(COVERAGE_DIR ${CMAKE_BINARY_DIR}/build/innodb/coverage)
+        add_custom_target(coverage
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${COVERAGE_DIR}
+            COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} --output-on-failure
+            COMMAND ${GCOVR_BIN}
+                    -r ${CMAKE_SOURCE_DIR}
+                    ${CMAKE_BINARY_DIR}
+                    --exclude '.*tests/.*'
+                    --exclude '.*unit-tests/.*'
+                    --xml -o ${COVERAGE_DIR}/coverage.xml
+            COMMAND ${GCOVR_BIN}
+                    -r ${CMAKE_SOURCE_DIR}
+                    ${CMAKE_BINARY_DIR}
+                    --exclude '.*tests/.*'
+                    --exclude '.*unit-tests/.*'
+                    --html --html-details -o ${COVERAGE_DIR}/coverage.html
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMENT "Running tests and generating coverage report with gcovr"
+            VERBATIM
+        )
+    else()
+        message(STATUS "gcovr not found; 'coverage' target will not be available")
+    endif()
 endif()
 # ---------------------------------------------------------------------------------------------------------------------
 # Integration test setup section
@@ -763,57 +686,45 @@ add_library(integration_test_common OBJECT ${integration_test_common_sources})
 target_include_directories(integration_test_common PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
 set_target_properties(integration_test_common PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
 # Reuse library PCH in integration test common
-add_dependencies(integration_test_common innodb_pch_build)
 target_link_libraries(integration_test_common PRIVATE innodb_pch)
-target_compile_options(integration_test_common PRIVATE -Winvalid-pch -include ${PCH_HEADER})
 
 # Integration Test Cconfiguration: `ib_cfg`
 function(innodb_integration_test executable_name main_src_file)
-  add_executable(${executable_name} $<TARGET_OBJECTS:integration_test_common> ${INTEGRATION_TEST_SOURCE_DIR}/${main_src_file})
-  target_include_directories(${executable_name} PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
-  target_link_libraries(${executable_name} PRIVATE integration_test_common innodb ${INTEGRATION_TEST_LIBS} innodb_pch)
-  # Ensure PCH is built and used
-  add_dependencies(${executable_name} innodb_pch_build)
-  target_compile_options(${executable_name} PRIVATE -include ${PCH_HEADER})
-  set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/bin)
-  set_target_properties(${executable_name} PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
-  if(ENABLE_GCOV)
-    target_link_libraries(${executable_name} PRIVATE gcov)
-  endif()
+    add_executable(${executable_name} $<TARGET_OBJECTS:integration_test_common> ${INTEGRATION_TEST_SOURCE_DIR}/${main_src_file})
+    target_include_directories(${executable_name} PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
+    target_link_libraries(${executable_name} PRIVATE integration_test_common innodb ${INTEGRATION_TEST_LIBS} innodb_pch)
+    # Use shared PCH via target linkage
+    set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/bin)
+    set_target_properties(${executable_name} PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
+    if(ENABLE_GCOV)
+        target_link_libraries(${executable_name} PRIVATE gcov)
+    endif()
 endfunction()
 
 
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Integration tests configuration
-# ---------------------------------------------------------------------------------------------------------------------
-#
-#
-#
-#
-# ---------------------------------------------------------------------------------------------------------------------
-#                      |  Executable name      |  Main source file     | Other files folder     |
-# ---------------------------------------------------------------------------------------------------------------------
-innodb_integration_test( itest_cfg               ib_cfg.cc                                      )
-innodb_integration_test( itest_cursor            ib_cursor.cc                                   )
-innodb_integration_test( itest_ddl               ib_ddl.cc                                      )
-innodb_integration_test( itest_dict              ib_dict.cc                                     )
-innodb_integration_test( itest_dict-2            ib_dict-2.cc                                   )
-innodb_integration_test( itest_drop              ib_drop.cc                                     )
-innodb_integration_test( itest_index             ib_index.cc                                    )
-innodb_integration_test( itest_logger            ib_logger.cc                                   )
-innodb_integration_test( itest_recover           ib_recover.cc                                  )
-innodb_integration_test( itest_shutdown          ib_shutdown.cc                                 )
-innodb_integration_test( itest_status            ib_status.cc                                   )
-innodb_integration_test( itest_tablename         ib_tablename.cc                                )
-innodb_integration_test( itest_test1             ib_test1.cc                                    )
-innodb_integration_test( itest_test2             ib_test2.cc                                    )
-innodb_integration_test( itest_test3             ib_test3.cc                                    )
-innodb_integration_test( itest_test5             ib_test5.cc                                    )
-innodb_integration_test( itest_types             ib_types.cc                                    )
-innodb_integration_test( itest_update            ib_update.cc                                   )
-innodb_integration_test( itest_search            ib_search.cc                                   )
-innodb_integration_test( itest_parallel_reader   ib_parallel_reader.cc                          )
-innodb_integration_test( itest_deadlock          ib_deadlock.cc                                 )
-innodb_integration_test( itest_mt_stress         ib_mt_stress.cc                                )
-innodb_integration_test( itest_perf1             ib_perf1.cc                                    )
+# ----------------------------------------------------------------------------------------------------
+#                      |  Executable name      |  Main source file          | Other files folder     |
+# ----------------------------------------------------------------------------------------------------
+innodb_integration_test( itest_cfg               ib_cfg.cc                                           )
+innodb_integration_test( itest_cursor            ib_cursor.cc                                        )
+innodb_integration_test( itest_ddl               ib_ddl.cc                                           )
+innodb_integration_test( itest_dict              ib_dict.cc                                          )
+innodb_integration_test( itest_dict-2            ib_dict-2.cc                                        )
+innodb_integration_test( itest_drop              ib_drop.cc                                          )
+innodb_integration_test( itest_index             ib_index.cc                                         )
+innodb_integration_test( itest_logger            ib_logger.cc                                        )
+innodb_integration_test( itest_recover           ib_recover.cc                                       )
+innodb_integration_test( itest_shutdown          ib_shutdown.cc                                      )
+innodb_integration_test( itest_status            ib_status.cc                                        )
+innodb_integration_test( itest_tablename         ib_tablename.cc                                     )
+innodb_integration_test( itest_test1             ib_test1.cc                                         )
+innodb_integration_test( itest_test2             ib_test2.cc                                         )
+innodb_integration_test( itest_test3             ib_test3.cc                                         )
+innodb_integration_test( itest_test5             ib_test5.cc                                         )
+innodb_integration_test( itest_types             ib_types.cc                                         )
+innodb_integration_test( itest_update            ib_update.cc                                        )
+innodb_integration_test( itest_search            ib_search.cc                                        )
+innodb_integration_test( itest_parallel_reader   ib_parallel_reader.cc                               )
+innodb_integration_test( itest_deadlock          ib_deadlock.cc                                      )
+innodb_integration_test( itest_mt_stress         ib_mt_stress.cc                                     )
+innodb_integration_test( itest_perf1             ib_perf1.cc                                         )
