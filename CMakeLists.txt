@@ -249,14 +249,71 @@ if(LIBURING_FOUND)
 endif()
 
 # Build PCH using CMake's native support so each consumer compiles with identical flags
-target_precompile_headers(innodb_pch INTERFACE ${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h)
+# Build a single GCC PCH once and share it via -include
+set(PCH_HEADER_SRC ${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h)
+set(PCH_DIR        ${CMAKE_BINARY_DIR}/pch)
+set(PCH_HEADER     ${PCH_DIR}/innodb_pch.h)
+set(PCH_GCH        ${PCH_DIR}/innodb_pch.h.gch)
 
-# Silence glibc fortify #warning and disable fortify in Debug/coverage builds
-target_compile_options(innodb_pch INTERFACE
-  $<$<OR:$<CONFIG:Debug>,$<BOOL:${ENABLE_GCOV}>>:-Wno-cpp>
-  $<$<OR:$<CONFIG:Debug>,$<BOOL:${ENABLE_GCOV}>>:-U_FORTIFY_SOURCE>
-  $<$<OR:$<CONFIG:Debug>,$<BOOL:${ENABLE_GCOV}>>:-D_FORTIFY_SOURCE=0>
-)
+set(PCH_INCLUDE_FLAGS)
+foreach(_dir ${CMAKE_SOURCE_DIR}/innodb/src/include ${CMAKE_SOURCE_DIR}/innodb/include ${CMAKE_BINARY_DIR}/include ${BS_THREAD_POOL_INCLUDE_DIRS} ${LIBURING_INCLUDE_DIRS})
+  list(APPEND PCH_INCLUDE_FLAGS -I${_dir})
+endforeach()
+
+set(PCH_CXX_FLAGS_LIST)
+set(_PCH_BASE_FLAGS "${CMAKE_CXX_FLAGS}")
+separate_arguments(_PCH_BASE_FLAGS_LIST UNIX_COMMAND "${_PCH_BASE_FLAGS}")
+list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_BASE_FLAGS_LIST})
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(_PCH_DEBUG_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}")
+  separate_arguments(_PCH_DEBUG_FLAGS_LIST UNIX_COMMAND "${_PCH_DEBUG_FLAGS}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_DEBUG_FLAGS_LIST})
+endif()
+
+if(ENABLE_GCOV)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    list(APPEND PCH_CXX_FLAGS_LIST -O0 -g --coverage)
+  endif()
+endif()
+
+if(DEFINED ENV{CPPFLAGS})
+  set(_PCH_ENV_CPP "$ENV{CPPFLAGS}")
+  separate_arguments(_PCH_ENV_CPP_LIST UNIX_COMMAND "${_PCH_ENV_CPP}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_CPP_LIST})
+endif()
+if(DEFINED ENV{CXXFLAGS})
+  set(_PCH_ENV_CXX "$ENV{CXXFLAGS}")
+  separate_arguments(_PCH_ENV_CXX_LIST UNIX_COMMAND "${_PCH_ENV_CXX}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_CXX_LIST})
+endif()
+if(DEFINED ENV{NIX_CFLAGS_COMPILE})
+  set(_PCH_ENV_NIX "$ENV{NIX_CFLAGS_COMPILE}")
+  separate_arguments(_PCH_ENV_NIX_LIST UNIX_COMMAND "${_PCH_ENV_NIX}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_NIX_LIST})
+endif()
+
+# Ensure fortify is disabled last in Debug/coverage for GCC for the PCH build too
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ENABLE_GCOV)
+    list(APPEND PCH_CXX_FLAGS_LIST -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -Wno-cpp)
+  endif()
+endif()
+
+set(PCH_FEATURE_DEFS)
+if(LIBURING_FOUND)
+  set(PCH_FEATURE_DEFS -DHAVE_LIBURING)
+endif()
+
+add_custom_command(OUTPUT ${PCH_GCH}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PCH_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PCH_HEADER_SRC} ${PCH_HEADER}
+  COMMAND ${CMAKE_CXX_COMPILER} -x c++-header -std=c++23 -DUNIV_LINUX ${PCH_FEATURE_DEFS} ${PCH_INCLUDE_FLAGS} ${PCH_CXX_FLAGS_LIST} -o ${PCH_GCH} ${PCH_HEADER}
+  DEPENDS ${PCH_HEADER_SRC}
+  VERBATIM)
+
+add_custom_target(innodb_pch_build ALL DEPENDS ${PCH_GCH})
+set_target_properties(innodb_pch_build PROPERTIES FOLDER "innodb")
 
 
 # Include Flex and Bison CMake modules
@@ -275,6 +332,8 @@ include_directories(${CMAKE_BINARY_DIR}/include ${GEN_PARS_DIR})
 
 add_library(innodb_sql OBJECT ${BISON_innodb_parser_OUTPUTS} ${FLEX_innodb_lexer_OUTPUTS})
 target_link_libraries(innodb_sql PRIVATE innodb_pch)
+add_dependencies(innodb_sql innodb_pch_build)
+target_compile_options(innodb_sql PRIVATE -include ${PCH_HEADER})
 set_target_properties(innodb_sql PROPERTIES FOLDER "innodb")
 set_target_properties(innodb_sql PROPERTIES POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS innodb_sql)
@@ -340,6 +399,8 @@ function(innodb_module module_dir)
         ${LIBURING_INCLUDE_DIRS}
     )
     target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
+    add_dependencies(${obj_tgt} innodb_pch_build)
+    target_compile_options(${obj_tgt} PRIVATE -include ${PCH_HEADER})
     # Ensure position independent code so objects can link into shared libs
     set_target_properties(${obj_tgt} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -371,8 +432,6 @@ innodb_module("mem")
 innodb_module("sync")
 innodb_module("fut")
 innodb_module("log")
-# Ensure runtime log globals are compiled into the log module to satisfy references from other modules
-target_sources(mod_log PRIVATE ${CMAKE_SOURCE_DIR}/innodb/src/log/log_runtime.cc)
 innodb_module("fil")
 innodb_module("fsp")
 innodb_module("buf")
@@ -538,6 +597,8 @@ endif()
 
 # Reuse library PCH for unit test common objects (native CMake PCH)
 target_link_libraries(unit_test_common PRIVATE innodb_pch)
+add_dependencies(unit_test_common innodb_pch_build)
+target_compile_options(unit_test_common PRIVATE -include ${PCH_HEADER})
 
 function(innodb_gtest executable_name utest_folder)
     # Gather sources for this unit-test module
@@ -560,6 +621,8 @@ function(innodb_gtest executable_name utest_folder)
     target_compile_definitions(${obj_tgt} PRIVATE UNIV_BTR_PRINT UNIT_TESTING)
     # Reuse the library PCH for all unit-test module compilations
     target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
+    add_dependencies(${obj_tgt} innodb_pch_build)
+    target_compile_options(${obj_tgt} PRIVATE -include ${PCH_HEADER})
     set_target_properties(${obj_tgt} PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
     # Register the object target for aggregation later
@@ -617,6 +680,8 @@ if(ENABLE_GCOV)
     endif()
 endif()
 target_link_libraries(utest PRIVATE innodb_pch)
+add_dependencies(utest innodb_pch_build)
+target_compile_options(utest PRIVATE -include ${PCH_HEADER})
 set_target_properties(utest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin)
 set_target_properties(utest PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
@@ -693,7 +758,8 @@ function(innodb_integration_test executable_name main_src_file)
     add_executable(${executable_name} $<TARGET_OBJECTS:integration_test_common> ${INTEGRATION_TEST_SOURCE_DIR}/${main_src_file})
     target_include_directories(${executable_name} PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
     target_link_libraries(${executable_name} PRIVATE integration_test_common innodb ${INTEGRATION_TEST_LIBS} innodb_pch)
-    # Use shared PCH via target linkage
+  add_dependencies(${executable_name} innodb_pch_build)
+  target_compile_options(${executable_name} PRIVATE -include ${PCH_HEADER})
     set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/bin)
     set_target_properties(${executable_name} PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
     if(ENABLE_GCOV)
