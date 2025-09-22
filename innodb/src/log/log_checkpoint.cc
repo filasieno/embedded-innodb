@@ -34,6 +34,17 @@ constexpr ulint LOG_CHECKPOINT_FREE_PER_THREAD = 4 * UNIV_PAGE_SIZE;
 constexpr ulint LOG_CHECKPOINT_EXTRA_FREE = 8 * UNIV_PAGE_SIZE;
 constexpr ulint LOG_POOL_CHECKPOINT_RATIO_ASYNC = 32;
 
+void Log::fsp_current_free_limit_set_and_checkpoint(ulint limit) noexcept {
+  acquire();
+  log_fsp_current_free_limit = limit;
+  release();
+
+  // Make a synchronous checkpoint to persist the new free limit
+  while (!checkpoint(true, true)) {
+    ;
+  }
+}
+
 void Log::checkpoint_set_nth_group_info(byte *buf, ulint n, ulint file_no, ulint offset) noexcept {
   ut_ad(n < LOG_MAX_N_GROUPS);
 

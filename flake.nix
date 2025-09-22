@@ -46,7 +46,9 @@
             bsThreadPoolPkg
           ];
 
-          propagatedBuildInputs = [];
+          propagatedBuildInputs = [
+            pkgs.liburing
+          ];
         in
         {
           inherit pkgs nativeBuildInputs buildInputs propagatedBuildInputs;
@@ -64,37 +66,51 @@
             version = "0.1";
             src = ./.;
 
-            nativeBuildInputs = common.nativeBuildInputs;
-            
-            buildInputs = common.buildInputs
-              ++ (with pkgs; [ ]);
+            # Split outputs: shared libs in $out, headers and static libs in $dev
+            outputs = [ "out" "dev" ];
 
-            propagatedBuildInputs = common.propagatedBuildInputs;
-
-            # Out-of-source build using Ninja; disable network-bound unit tests
-            configurePhase = ''
-              cmake \
-                -G Ninja \
-                -B build -S . \
-                -DCMAKE_BUILD_TYPE=Debug \
-                -DCMAKE_INSTALL_PREFIX=$out \
-                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-                -DUNIT_TESTING=ON \
-                -DDISABLE_XA=OFF \
-                -DENABLE_GCOV=ON
-            '';
-
+            nativeBuildInputs     = common.nativeBuildInputs;
+            buildInputs           = common.buildInputs ++ (with pkgs; [ ]);
+            propagatedBuildInputs = common.propagatedBuildInputs ;
+           
             doCheck = false;
 
+            configurePhase = ''
+              cmake --preset debug
+            '';
+            
             buildPhase = ''
-              ninja -C build -v
+              cmake --build --preset debug
             '';
 
             installPhase = ''
               ninja -C build install
+
               # Expose compile_commands.json for editor tooling
               mkdir -p $out
-              cp -f build/compile_commands.json $out/ || true
+              
+              # Move headers to $dev (Nix convention)
+              if [ -d "$out/include" ]; then
+                mkdir -p $dev
+                mv $out/include $dev/
+              fi
+
+              # Install internal headers needed by consumers
+              # mkdir -p $dev/include
+              # cp -R innodb/src/include/* $dev/include/
+
+              # Install generated config header for consumers
+              # if [ -f build/include/ib0config.h ]; then
+              #   cp -f build/include/ib0config.h $dev/include/
+              # fi
+
+              # Move static library to $dev; keep shared in $out
+              if [ -d "$out/lib" ]; then
+                mkdir -p $dev/lib
+                if ls $out/lib/*.a >/dev/null 2>&1; then
+                  mv $out/lib/*.a $dev/lib/
+                fi
+              fi
             '';
 
             meta = with pkgs.lib; {

@@ -23,6 +23,16 @@ set(CMAKE_CXX_STANDARD            23)
 set(CMAKE_CXX_STANDARD_REQUIRED   ON)
 set(CMAKE_CXX_EXTENSIONS          OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+  add_custom_target(export_compile_commands ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_BINARY_DIR}/compile_commands.json
+            ${CMAKE_SOURCE_DIR}/build/compile_commands.json
+    BYPRODUCTS ${CMAKE_SOURCE_DIR}/build/compile_commands.json
+    COMMENT "Copy compile_commands.json to source-root build/"
+    VERBATIM)
+endif()
 
 
 
@@ -41,7 +51,6 @@ find_package(BISON     REQUIRED)
 
 pkg_check_modules(BS_THREAD_POOL REQUIRED bs-thread-pool)
 pkg_check_modules(LIBURING       IMPORTED_TARGET liburing)
-
 
 # OptionalL if available use `ccache`
 find_program(CCACHE_PROGRAM ccache)
@@ -140,6 +149,17 @@ add_compile_definitions($<$<CONFIG:Debug>:UNIV_DEBUG>)
 
 # Silence Clang-only warning that fires on some constexpr comparisons in headers
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
+
+# GCC: Avoid "_FORTIFY_SOURCE requires compiling with optimization (-O)" in Debug/coverage builds
+# - Some environments enable fortify by default; it requires -O1 or higher.
+# - In Debug and when coverage forces -O0, force _FORTIFY_SOURCE to 0 at the end of flags.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ENABLE_GCOV)
+    set(FORTIFY_OFF_FLAGS "-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0")
+    set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${FORTIFY_OFF_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FORTIFY_OFF_FLAGS}")
+  endif()
+endif()
 # ---------------------------------------------------------------------------------------------------------------------
 # end Setup CI Build Matrix and Build options
 
@@ -245,10 +265,64 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(PCH_DEBUG_FLAGS -g)
 endif()
 
+# Build PCH with the same effective compiler flags as other compilations
+set(PCH_CXX_FLAGS_LIST)
+
+# Base CMake flags
+set(_PCH_BASE_FLAGS "${CMAKE_CXX_FLAGS}")
+separate_arguments(_PCH_BASE_FLAGS_LIST UNIX_COMMAND "${_PCH_BASE_FLAGS}")
+list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_BASE_FLAGS_LIST})
+
+# Debug-specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(_PCH_DEBUG_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}")
+  separate_arguments(_PCH_DEBUG_FLAGS_LIST UNIX_COMMAND "${_PCH_DEBUG_FLAGS}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_DEBUG_FLAGS_LIST})
+endif()
+
+# Coverage flags when enabled
+if(ENABLE_GCOV)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    list(APPEND PCH_CXX_FLAGS_LIST -O0 -g --coverage)
+  endif()
+endif()
+
+# Include environment-provided flags to match wrapper/toolchain (e.g. Nix wrappers)
+if(DEFINED ENV{CPPFLAGS})
+  set(_PCH_ENV_CPP "$ENV{CPPFLAGS}")
+  separate_arguments(_PCH_ENV_CPP_LIST UNIX_COMMAND "${_PCH_ENV_CPP}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_CPP_LIST})
+endif()
+if(DEFINED ENV{CXXFLAGS})
+  set(_PCH_ENV_CXX "$ENV{CXXFLAGS}")
+  separate_arguments(_PCH_ENV_CXX_LIST UNIX_COMMAND "${_PCH_ENV_CXX}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_CXX_LIST})
+endif()
+if(DEFINED ENV{NIX_CFLAGS_COMPILE})
+  set(_PCH_ENV_NIX "$ENV{NIX_CFLAGS_COMPILE}")
+  separate_arguments(_PCH_ENV_NIX_LIST UNIX_COMMAND "${_PCH_ENV_NIX}")
+  list(APPEND PCH_CXX_FLAGS_LIST ${_PCH_ENV_NIX_LIST})
+endif()
+
+# Ensure fortify is disabled last in Debug/coverage for GCC
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ENABLE_GCOV)
+    list(APPEND PCH_CXX_FLAGS_LIST -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0)
+  endif()
+endif()
+
+# Silence preprocessor #warning lines in PCH build (glibc fortify message)
+list(APPEND PCH_CXX_FLAGS_LIST -Wno-cpp)
+
+set(PCH_FEATURE_DEFS)
+if(LIBURING_FOUND)
+  set(PCH_FEATURE_DEFS -DHAVE_LIBURING)
+endif()
+
 add_custom_command(OUTPUT ${PCH_GCH}
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PCH_DIR}
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PCH_HEADER_SRC} ${PCH_HEADER}
-  COMMAND ${CMAKE_CXX_COMPILER} -x c++-header -std=c++23 -DUNIV_LINUX ${PCH_DEBUG_DEF} ${PCH_DEBUG_FLAGS} ${PCH_INCLUDE_FLAGS} -o ${PCH_GCH} ${PCH_HEADER}
+  COMMAND ${CMAKE_CXX_COMPILER} -x c++-header -std=c++23 -DUNIV_LINUX ${PCH_FEATURE_DEFS} ${PCH_DEBUG_DEF} ${PCH_DEBUG_FLAGS} ${PCH_INCLUDE_FLAGS} ${PCH_CXX_FLAGS_LIST} -o ${PCH_GCH} ${PCH_HEADER}
   DEPENDS ${PCH_HEADER_SRC}
   VERBATIM)
 
@@ -273,6 +347,7 @@ include_directories(${CMAKE_BINARY_DIR}/include ${GEN_PARS_DIR})
 add_library(innodb_sql OBJECT ${BISON_innodb_parser_OUTPUTS} ${FLEX_innodb_lexer_OUTPUTS})
 target_link_libraries(innodb_sql PRIVATE innodb_pch)
 set_target_properties(innodb_sql PROPERTIES FOLDER "innodb")
+set_target_properties(innodb_sql PROPERTIES POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS innodb_sql)
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -305,6 +380,17 @@ function(innodb_module module_dir)
   file(GLOB module_sources CONFIGURE_DEPENDS 
     "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}/*.cc")
 
+  # # Exclude legacy monolithic file when modular sources exist to avoid duplicates
+  # if(module_dir STREQUAL "log")
+  #   # Exclude legacy monolithic implementation to avoid duplicate symbols
+  #   list(FILTER module_sources EXCLUDE REGEX ".*/log0log\\.cc$")
+  #   # Use canonical recovery implementation from log0recv.cc; exclude temporary split duplicates
+  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_recovery\\.cc$")
+  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_globals\\.cc$")
+  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_parse\\.cc$")
+  #   list(FILTER module_sources EXCLUDE REGEX ".*/recv_scan\\.cc$")
+  # endif()
+
   # Step 2 — Define per-module OBJECT target (single compilation point for the module)
   set(obj_tgt    "mod_${module_dir}")
 
@@ -327,7 +413,9 @@ function(innodb_module module_dir)
   target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
   # Reuse the single PCH across all compilations
   add_dependencies(${obj_tgt} innodb_pch_build)
-  target_compile_options(${obj_tgt} PRIVATE -Winvalid-pch -include ${PCH_HEADER})
+  target_compile_options(${obj_tgt} PRIVATE -include ${PCH_HEADER})
+  # Ensure position independent code so objects can link into shared libs
+  set_target_properties(${obj_tgt} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
   # Step 3 — Register object target for the final aggregated library
   set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${obj_tgt})
@@ -409,6 +497,23 @@ if(LIBURING_FOUND)
   target_compile_definitions(innodb PUBLIC HAVE_LIBURING)
 endif()
 
+# Build a shared library from the same object files
+add_library(innodb_shared SHARED ${INNODB_ALL_OBJECTS})
+set_target_properties(innodb_shared PROPERTIES OUTPUT_NAME innodb FOLDER "innodb")
+target_compile_features(innodb_shared PRIVATE cxx_std_23)
+target_compile_options(innodb_shared PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
+target_include_directories(innodb_shared PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/innodb/include>)
+target_include_directories(innodb_shared PRIVATE
+  ${CMAKE_SOURCE_DIR}/innodb/src/include
+  ${CMAKE_BINARY_DIR}/include
+  ${BS_THREAD_POOL_INCLUDE_DIRS}
+  ${LIBURING_INCLUDE_DIRS}
+)
+if(LIBURING_FOUND)
+  target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
+  target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)
+endif()
+
 # ---------------------------------------------------------------------------------------------------------------------
 # end Embedded InnoDB module definitions
 
@@ -463,7 +568,7 @@ endif()
 #
 #
 # ---------------------------------------------------------------------------------------------------------------------
-install(TARGETS innodb
+install(TARGETS innodb innodb_shared
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
 )
@@ -506,7 +611,7 @@ endif()
 # Reuse library PCH for unit test common objects
 add_dependencies(unit_test_common innodb_pch_build)
 target_link_libraries(unit_test_common PRIVATE innodb_pch)
-target_compile_options(unit_test_common PRIVATE -Winvalid-pch -include ${PCH_HEADER})
+target_compile_options(unit_test_common PRIVATE -include ${PCH_HEADER})
 
 function(innodb_gtest executable_name utest_folder)
     # Gather sources for this unit-test module
@@ -530,7 +635,7 @@ function(innodb_gtest executable_name utest_folder)
     # Reuse the library PCH for all unit-test module compilations
     add_dependencies(${obj_tgt} innodb_pch_build)
     target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
-    target_compile_options(${obj_tgt} PRIVATE -Winvalid-pch -include ${PCH_HEADER})
+    target_compile_options(${obj_tgt} PRIVATE -include ${PCH_HEADER})
     set_target_properties(${obj_tgt} PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
     # Register the object target for aggregation later
@@ -588,7 +693,7 @@ if(ENABLE_GCOV)
   endif()
 endif()
 add_dependencies(utest innodb_pch_build)
-target_compile_options(utest PRIVATE -Winvalid-pch -include ${PCH_HEADER})
+target_compile_options(utest PRIVATE -include ${PCH_HEADER})
 set_target_properties(utest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin)
 set_target_properties(utest PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
@@ -669,7 +774,7 @@ function(innodb_integration_test executable_name main_src_file)
   target_link_libraries(${executable_name} PRIVATE integration_test_common innodb ${INTEGRATION_TEST_LIBS} innodb_pch)
   # Ensure PCH is built and used
   add_dependencies(${executable_name} innodb_pch_build)
-  target_compile_options(${executable_name} PRIVATE -Winvalid-pch -include ${PCH_HEADER})
+  target_compile_options(${executable_name} PRIVATE -include ${PCH_HEADER})
   set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/bin)
   set_target_properties(${executable_name} PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
   if(ENABLE_GCOV)
