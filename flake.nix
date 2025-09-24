@@ -84,33 +84,14 @@
             '';
 
             installPhase = ''
-              ninja -C build install
-
               # Expose compile_commands.json for editor tooling
-              mkdir -p $out
-              
-              # Move headers to $dev (Nix convention)
-              if [ -d "$out/include" ]; then
-                mkdir -p $dev
-                mv $out/include $dev/
-              fi
+              mkdir -p $out/lib
+              mkdir -p $dev/include
+              mkdir -p $dev/lib
 
-              # Install internal headers needed by consumers
-              # mkdir -p $dev/include
-              # cp -R innodb/src/include/* $dev/include/
-
-              # Install generated config header for consumers
-              # if [ -f build/include/ib0config.h ]; then
-              #   cp -f build/include/ib0config.h $dev/include/
-              # fi
-
-              # Move static library to $dev; keep shared in $out
-              if [ -d "$out/lib" ]; then
-                mkdir -p $dev/lib
-                if ls $out/lib/*.a >/dev/null 2>&1; then
-                  mv $out/lib/*.a $dev/lib/
-                fi
-              fi
+              touch $dev/lib/dev
+              touch $dev/include/dev
+              touch $out/lib/out
             '';
 
             meta = with pkgs.lib; {
