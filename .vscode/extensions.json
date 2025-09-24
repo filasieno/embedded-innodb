@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "github.vscode-codeql",
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github",
+        "ms-vscode.hexeditor",
+        "ms-vscode.cmake-tools"
+    ]
+}

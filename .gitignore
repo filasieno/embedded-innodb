@@ -16,7 +16,6 @@ CMakeScripts/
 *.ipr
 
 # IDE - VSCode
-.vscode/
 *.code-workspace
 .history/
 
