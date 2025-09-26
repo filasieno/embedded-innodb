@@ -1,33 +1,42 @@
 {
     "version": 6,
-    "cmakeMinimumRequired": {
-        "major": 3,
-        "minor": 24
-    },
+    "cmakeMinimumRequired": { "major": 3, "minor": 24 },
     "configurePresets": [
         {
             "name": "base",
-            "generator": "Ninja",
-            "binaryDir": "build/${presetName}",
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "build",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_CONFIGURATION_TYPES": "Debug; Release"
             }
         },
         {
-            "name": "debug",
-            "inherits": "base",
+            "name":        "debug",
+            "inherits":    "base",
             "displayName": "Debug",
+
             "cacheVariables": {
                 "ENABLE_UNIT_TESTING":        "ON",
                 "ENABLE_INTEGRATION_TESTING": "ON",
                 "ENABLE_XA":                  "OFF",
-                "ENABLE_GCOV":                "ON",
+                "ENABLE_GCOV":                "OFF",
                 "ENABLE_INNODB_LUA":          "OFF"
+            }
+        },
+        {
+            "name":        "debug-gcov",
+            "inherits":    "debug",
+            "displayName": "Debug GCov",
+            
+            "cacheVariables": {
+                "ENABLE_GCOV": "ON"
             }
         }
     ],
     "buildPresets": [
-        { "name": "debug",   "configurePreset": "debug" }
+        { "name": "debug",     "configurePreset": "debug"     },
+        { "name": "debug-gcov", "configurePreset": "debug-gcov" }
     ]
 }

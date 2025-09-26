@@ -1,0 +1,5 @@
+{
+    "Lua.diagnostics.globals": [],
+    "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix",
+    "explorer.excludeGitIgnore": false,
+}

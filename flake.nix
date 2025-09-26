@@ -127,6 +127,8 @@
                 gcovr
                 lcov
                 sysbench
+                bun
+                clang-tools
               ]);
 
             buildInputs = common.buildInputs;
@@ -144,6 +146,7 @@
               export PS1="$YELLOW_BOLD(embedded-innodb)$RESET $GREEN[\u@\h:\w]\$$RESET "
 
               source $PROJECT_ROOT/scripts/env.sh
+
               function ib-showpkgs() {
                  echo "lua.dev inc: ${pkgs.luajit}"
               }
