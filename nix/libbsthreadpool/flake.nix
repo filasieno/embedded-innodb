@@ -21,7 +21,7 @@
         in
         {
           default = stdenv.mkDerivation {
-            pname = "bs-thread-pool";
+            pname = "libbsthreadpool";
             version = "5.0.0";
             src = pkgs.fetchFromGitHub {
               owner = "bshoshany";
@@ -41,7 +41,7 @@
               cp -v include/BS_thread_pool_utils.hpp "$out/include/" || true
               # Install pkg-config file
               mkdir -p "$out/lib/pkgconfig"
-              install -D ${./bs-thread-pool.pc} "$out/lib/pkgconfig/bs-thread-pool.pc"
+              install -D ${./libbsthreadpool.pc} "$out/lib/pkgconfig/libbsthreadpool.pc"
               runHook postInstall
             '';
 

@@ -1,17 +1,17 @@
 {
   "nodes": {
-    "bs-thread-pool": {
+    "libbsthreadpool": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "path": "nix/bs-thread-pool",
+        "path": "nix/libbsthreadpool",
         "type": "path"
       },
       "original": {
-        "path": "nix/bs-thread-pool",
+        "path": "nix/libbsthreadpool",
         "type": "path"
       },
       "parent": []
@@ -34,7 +34,7 @@
     },
     "root": {
       "inputs": {
-        "bs-thread-pool": "bs-thread-pool",
+        "libbsthreadpool": "libbsthreadpool",
         "nixpkgs": "nixpkgs"
       }
     }

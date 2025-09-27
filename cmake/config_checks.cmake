@@ -27,14 +27,4 @@ check_include_files("stdint.h"            HAVE_STDINT_H)
 
 # Objective: Generate configuration header used by sources during compilation
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
-configure_file(
-    ${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
-    ${CMAKE_BINARY_DIR}/include/ib0config.h
-)
-
-# Include Flex and Bison CMake modules
-
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Configuration checks (to generate ib0config.h)
-# ---------------------------------------------------------------------------------------------------------------------
+configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.cmake ${CMAKE_BINARY_DIR}/include/ib0config.h)

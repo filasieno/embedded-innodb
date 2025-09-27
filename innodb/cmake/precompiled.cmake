@@ -18,7 +18,7 @@ target_include_directories(innodb_pch INTERFACE
     "${CMAKE_SOURCE_DIR}/innodb/include"
     "${CMAKE_SOURCE_DIR}/innodb/src/include"
     "${CMAKE_BINARY_DIR}/include"
-    $<$<BOOL:${BS_THREAD_POOL_INCLUDE_DIR}>:${BS_THREAD_POOL_INCLUDE_DIR}>
+    ${BS_THREAD_POOL_INCLUDE_DIRS}
     $<$<BOOL:${LIBURING_INCLUDE_DIRS}>:${LIBURING_INCLUDE_DIRS}>
 )
 

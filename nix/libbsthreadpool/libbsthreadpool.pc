@@ -2,7 +2,7 @@ prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
 includedir=${prefix}/include
 
-Name: bs-thread-pool
+Name: libbsthreadpool
 Description: BS::thread_pool header-only library
 Version: 5.0.0
 Cflags: -I${includedir}

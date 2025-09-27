@@ -31,19 +31,19 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/lib)
 
 # Ensure that the required dependecies are available
-find_package(PkgConfig REQUIRED)
-find_package(FLEX      REQUIRED)
-find_package(BISON     REQUIRED)
+find_package(PkgConfig       REQUIRED)
+find_package(FLEX            REQUIRED)
+find_package(BISON           REQUIRED)
 
-# For header-only bs-thread-pool, find headers directly
-find_path(BS_THREAD_POOL_INCLUDE_DIR BS_thread_pool.hpp PATH_SUFFIXES include)
-if(NOT BS_THREAD_POOL_INCLUDE_DIR)
-    message(FATAL_ERROR "BS_thread_pool.hpp not found. Please ensure bs-thread-pool is installed.")
-endif()
+pkg_check_modules(BS_THREAD_POOL REQUIRED IMPORTED_TARGET libbsthreadpool)
+pkg_check_modules(LIBURING       REQUIRED IMPORTED_TARGET liburing)
 
-pkg_check_modules(LIBURING REQUIRED IMPORTED_TARGET liburing)
 if(NOT LIBURING_FOUND)
     message(FATAL_ERROR "liburing is required but not found. Please install liburing development headers.")
+endif()
+
+if(NOT BS_THREAD_POOL_FOUND)
+    message(FATAL_ERROR "libbsthreadpool is required but not found. Please install libbsthreadpool development headers.")
 endif()
 
 # OptionalL if available use `ccache`
@@ -53,6 +53,5 @@ if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
 endif()
 
-# ---------------------------------------------------------------------------------------------------------------------
-# end General configuration
-# ---------------------------------------------------------------------------------------------------------------------
+include(FeatureSummary)
+feature_summary(WHAT ALL)

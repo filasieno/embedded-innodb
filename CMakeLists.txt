@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.24)
 project(embedded-innodb LANGUAGES C CXX)
 
 
-include(cmake/general_config.cmake)
+include(cmake/config.cmake)
 include(cmake/version.cmake)
 include(cmake/ci_matrix.cmake)
 include(cmake/config_checks.cmake)

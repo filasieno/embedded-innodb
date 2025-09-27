@@ -10,13 +10,3 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_RECURSIVE          YES)
     set(DOXYGEN_OUTPUT_DIRECTORY   "${CMAKE_BINARY_DIR}/docs")
 endif()
-
-
-
-# ---------------------------------------------------------------------------------------------------------------------
-# end Generate Doxygen Documentation
-
-
-
-
-

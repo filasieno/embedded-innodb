@@ -3,13 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    bs-thread-pool = {
-      url = "path:nix/bs-thread-pool";
+    libbsthreadpool = {
+      url = "path:nix/libbsthreadpool";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, bs-thread-pool }:
+  outputs = { self, nixpkgs, libbsthreadpool }:
     let
       systems = [
         "x86_64-linux"
@@ -21,7 +21,7 @@
         let
           pkgs = import nixpkgs { inherit system; };
 
-          bsThreadPoolPkg = bs-thread-pool.packages.${system}.default;
+          bsThreadPoolPkg = libbsthreadpool.packages.${system}.default;
           
           nativeBuildInputs = with pkgs; [
             cmake
