@@ -1,5 +1,16 @@
 {
-    "Lua.diagnostics.globals": [],
-    "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix",
-    "explorer.excludeGitIgnore": false,
+	"Lua.diagnostics.globals": [],
+	"nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix",
+	"C_Cpp.intelliSenseEngine": "disabled",
+	"clangd.arguments": [
+//		"--log=verbose"
+		"--enable-config",
+		"--background-index",
+		"--pch-storage=disk",
+		"--all-scopes-completion",
+		"--header-insertion=never",
+		"--clang-tidy=false",
+		"--query-driver=/nix/store/*-clang-wrapper-*/bin/clang++;*/bin/clang++"
+	],
+	"clangd.onConfigChanged": "restart"
 }
