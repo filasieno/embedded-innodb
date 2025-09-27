@@ -10,8 +10,6 @@ set(INTEGRATION_TEST_BINARY_DIR        "${CMAKE_BINARY_DIR}/innodb/bin/tests")
 set(INTEGRATION_TEST_COMMON_INCLUDES   "${CMAKE_SOURCE_DIR}/innodb/include"
                                        "${CMAKE_SOURCE_DIR}/innodb/src/include"
                                        "${CMAKE_BINARY_DIR}/include"
-                                       "${BS_THREAD_POOL_INCLUDE_DIRS}"
-                                       "${LIBURING_INCLUDE_DIRS}"
                                        "${INTEGRATION_TEST_SOURCE_DIR}/common")
 
 # Integration Test Common Object Library configuration
@@ -20,6 +18,8 @@ file(GLOB integration_test_common_sources CONFIGURE_DEPENDS "${INTEGRATION_TEST_
 add_library(integration_test_common OBJECT ${integration_test_common_sources})
 target_include_directories(integration_test_common PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
 set_target_properties(integration_test_common PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
+# Link to BS Thread Pool for include directories
+target_link_libraries(integration_test_common PRIVATE PkgConfig::BS_THREAD_POOL)
 # Reuse library PCH in integration test common
 
 # Integration Test Cconfiguration: `ib_cfg`

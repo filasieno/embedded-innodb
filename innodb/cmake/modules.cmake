@@ -29,8 +29,6 @@ set(INNODB_COMMON_INCLUDES "${INNODB_PUBLIC_INCLUDE}"
                            "${INNODB_PRIVATE_INCLUDE}"
                            "${INNODB_GENERATED_PRIVATE_INCLUDE}"
                            "${INNODB_GENERATED_PUBLIC_INCLUDE}"
-                           ${BS_THREAD_POOL_INCLUDE_DIRS}
-                           ${LIBURING_INCLUDE_DIRS}
 )
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -159,8 +157,6 @@ target_include_directories(innodb PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/i
 target_include_directories(innodb PRIVATE
   ${CMAKE_SOURCE_DIR}/innodb/src/include
   ${CMAKE_BINARY_DIR}/include
-  ${BS_THREAD_POOL_INCLUDE_DIRS}
-  ${LIBURING_INCLUDE_DIRS}
 )
 # Link to PCH interface library to get precompiled headers and common settings
 target_link_libraries(innodb PRIVATE innodb_pch)
@@ -177,12 +173,6 @@ target_include_directories(innodb_shared PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE
 target_include_directories(innodb_shared PRIVATE
   ${CMAKE_SOURCE_DIR}/innodb/src/include
   ${CMAKE_BINARY_DIR}/include
-  ${BS_THREAD_POOL_INCLUDE_DIRS}
-  ${LIBURING_INCLUDE_DIRS}
 )
 target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
 target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)
-
-# ---------------------------------------------------------------------------------------------------------------------
-# end Embedded InnoDB module definitions
-# ---------------------------------------------------------------------------------------------------------------------

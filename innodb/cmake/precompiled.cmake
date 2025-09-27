@@ -18,8 +18,12 @@ target_include_directories(innodb_pch INTERFACE
     "${CMAKE_SOURCE_DIR}/innodb/include"
     "${CMAKE_SOURCE_DIR}/innodb/src/include"
     "${CMAKE_BINARY_DIR}/include"
-    ${BS_THREAD_POOL_INCLUDE_DIRS}
-    $<$<BOOL:${LIBURING_INCLUDE_DIRS}>:${LIBURING_INCLUDE_DIRS}>
+)
+
+# Link to dependency targets to get their include directories
+target_link_libraries(innodb_pch INTERFACE
+    PkgConfig::BS_THREAD_POOL
+    $<$<BOOL:${LIBURING_FOUND}>:PkgConfig::LIBURING>
 )
 
 target_compile_definitions(innodb_pch INTERFACE

@@ -8,8 +8,6 @@ set(UNIT_TEST_SOURCE_DIR      "${UNIT_TEST_ROOT_DIR}/src")
 set(UNIT_TEST_COMMON_INCLUDES "${CMAKE_SOURCE_DIR}/innodb/include"
                               "${CMAKE_SOURCE_DIR}/innodb/src/include"
                               "${CMAKE_BINARY_DIR}/include"
-                              "${BS_THREAD_POOL_INCLUDE_DIRS}"
-                              "${LIBURING_INCLUDE_DIRS}"
                               "${UNIT_TEST_SOURCE_DIR}/common")
 
 file(GLOB UNIT_TEST_COMMON_SOURCE CONFIGURE_DEPENDS "${UNIT_TEST_SOURCE_DIR}/common/*.cc")
@@ -27,6 +25,7 @@ if(GTEST_INCLUDE_DIRS)
 endif()
 
 # Unit test common objects link to innodb which includes PCH
+target_link_libraries(unit_test_common PRIVATE PkgConfig::BS_THREAD_POOL)
 
 function(innodb_gtest executable_name utest_folder)
     # Gather sources for this unit-test module

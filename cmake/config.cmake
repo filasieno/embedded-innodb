@@ -35,12 +35,15 @@ find_package(PkgConfig       REQUIRED)
 find_package(FLEX            REQUIRED)
 find_package(BISON           REQUIRED)
 
-pkg_check_modules(BS_THREAD_POOL REQUIRED IMPORTED_TARGET libbsthreadpool)
-pkg_check_modules(LIBURING       REQUIRED IMPORTED_TARGET liburing)
+# Check for liburing (required)
+pkg_check_modules(LIBURING REQUIRED IMPORTED_TARGET liburing)
 
 if(NOT LIBURING_FOUND)
     message(FATAL_ERROR "liburing is required but not found. Please install liburing development headers.")
 endif()
+
+# Check for BS Thread Pool (required) - imported target provides both includes and linking
+pkg_check_modules(BS_THREAD_POOL REQUIRED IMPORTED_TARGET libbsthreadpool)
 
 if(NOT BS_THREAD_POOL_FOUND)
     message(FATAL_ERROR "libbsthreadpool is required but not found. Please install libbsthreadpool development headers.")
