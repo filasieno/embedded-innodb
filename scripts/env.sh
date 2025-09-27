@@ -1,6 +1,6 @@
 #!/bin/bash
 function ib-configure() {
-    cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX="$PWD/build/out" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUNIT_TESTING=ON -DDISABLE_XA=OFF
+    cmake --preset debug
 }
 
 function ib-build() {
@@ -8,33 +8,44 @@ function ib-build() {
 }
 
 function ib-run-tests() {
-    itest_cfg
-    itest_cursor
-    itest_ddl
-    itest_deadlock
-    itest_dict
-    itest_dict-2
-    itest_drop
-    itest_index
-    itest_logger
-    itest_mt_stress
-    itest_parallel_reader
-    itest_perf1
-    itest_recover
-    itest_search
-    itest_shutdown
-    itest_status
-    itest_tablename
-    itest_test1
-    itest_test2
-    itest_test3
-    itest_test5
-    itest_types
-    itest_update
+    local test_dir="build/innodb/bin/tests/Debug"
+
+    if [[ ! -d "$test_dir" ]]; then
+        echo "ib-run-tests: test directory not found: $test_dir" >&2
+        echo "Make sure to run ib-configure and ib-build first" >&2
+        return 1
+    fi
+
+    echo "Running integration tests from: $test_dir"
+    cd "$test_dir" || return 1
+
+    ./itest_cfg
+    ./itest_cursor
+    ./itest_ddl
+    ./itest_deadlock
+    ./itest_dict
+    ./itest_dict-2
+    ./itest_drop
+    ./itest_index
+    # ./itest_logger
+    ./itest_mt_stress
+    ./itest_parallel_reader
+    ./itest_perf1
+    ./itest_recover
+    ./itest_search
+    ./itest_shutdown
+    ./itest_status
+    ./itest_tablename
+    ./itest_test1
+    ./itest_test2
+    ./itest_test3
+    ./itest_test5
+    ./itest_types
+    ./itest_update
 }
 
 function ib-run-utests() {
-    ctest --test-dir build/debug
+    GTEST_COLOR=yes ctest --test-dir build -C Debug
 }
 
 ## ib-cov — Generate code coverage reports with gcovr
@@ -53,7 +64,7 @@ function ib-run-utests() {
 ##   - Excludes test sources by default
 function ib-cov() {
     # Parse options
-    local BUILD_DIR="build/debug"
+    local BUILD_DIR="build"
     local RUN_TESTS=1
     local DO_CLEAN=0
     local DO_OPEN=0
@@ -71,7 +82,7 @@ function ib-cov() {
             -h|--help)
                 echo "ib-cov - Generate GCOV/HTML coverage reports"
                 echo "Usage: ib-cov [--build-dir DIR] [--no-run-tests] [--clean] [--open]"
-                echo "Default build dir: build/debug"
+                echo "Default build dir: build"
                 return 0;;
             *)
                 echo "ib-cov: unknown option: $1" 1>&2; return 2;;
@@ -119,7 +130,7 @@ function ib-cov() {
     if cmake --build "$BUILD_DIR" --target coverage >/dev/null 2>&1; then
         echo "Ran CMake 'coverage' target"
     else
-        [[ $RUN_TESTS -eq 1 ]] && ctest --test-dir "$BUILD_DIR" --output-on-failure | cat
+        [[ $RUN_TESTS -eq 1 ]] && GTEST_COLOR=yes ctest --test-dir "$BUILD_DIR" --output-on-failure | cat
         gcovr -r "$PROJECT_ROOT" \
             --object-directory "$BUILD_DIR" \
             --exclude '.*tests/.*' \

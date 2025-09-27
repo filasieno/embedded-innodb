@@ -415,7 +415,7 @@ static ib_err_t ib_cfg_var_get_version(const struct ib_cfg_var *cfg_var, void *v
   ut_a(strcasecmp(cfg_var->name, "version") == 0);
   ut_a(cfg_var->type == IB_CFG_TEXT);
 
-  *(const char **)value = VERSION;
+  *(const char **)value = INNODB_VERSION;
 
   return DB_SUCCESS;
 }

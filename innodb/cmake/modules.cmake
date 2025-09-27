@@ -1,30 +1,111 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# Embedded InnoDB module definitions
+# Embedded InnoDB Module Definitions and Library Assembly
 # ---------------------------------------------------------------------------------------------------------------------
 
-# Include precompiled headers configuration
+# ---------------------------------------------------------------------------------------------------------------------
+# innodb_create_object_library
+# ---------------------------------------------------------------------------------------------------------------------
+#
+# innodb_create_object_library(name source_files include_dirs [extra_compile_options...])
+#
+# Creates an OBJECT library with common Embedded InnoDB settings.
+#
+# Parameters:
+#   name: Name of the OBJECT library to create
+#   source_files: List of source files (or GLOB expression)
+#   include_dirs: List of include directories
+#   extra_compile_options: Optional additional compile options
+#
+# Sets up:
+#   - POSITION_INDEPENDENT_CODE for shared library compatibility
+#   - C++23 standard
+#   - Common compile options (warnings suppression)
+#   - Include directories
+#
+function(innodb_create_object_library name source_files include_dirs)
+    # Create the object library
+    add_library(${name} OBJECT ${source_files})
+
+    # Configure target properties
+    set_target_properties(${name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_compile_features(${name} PRIVATE cxx_std_23)
+    target_compile_options(${name} PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
+
+    # Set include directories
+    target_include_directories(${name} PRIVATE ${include_dirs})
+
+    # Apply any additional compile options
+    foreach(option IN LISTS ARGN)
+        target_compile_options(${name} PRIVATE ${option})
+    endforeach()
+endfunction()
+
+# This file defines the modular structure of Embedded InnoDB and orchestrates the build
+# of the final monolithic library from individual modules. The build system uses an
+# OBJECT library approach for efficient compilation and linking.
+#
+# Architecture:
+# - Each module is compiled as an OBJECT library for maximum flexibility
+# - Objects are aggregated into a single static library (innodb)
+# - A shared library variant (innodb_shared) is also built
+# - SQL parser is generated from FLEX/BISON grammar files
+#
+# Key Functions:
+# - innodb_module(): Creates an OBJECT library for a specific module
+# - innodb_create_object_library(): Creates OBJECT library with common settings
+# - Final aggregation: Combines all module objects into complete libraries
+#
+# Module List: api, btr, buf, data, ddl, dict, eval, fil, fsp, fut, lock, log, mach,
+#              mem, mtr, os, page, pars, que, read, rem, row, srv, sync, trx, usr, ut
+
+# Precompiled Headers Setup
+# -------------------------
 include(${CMAKE_CURRENT_LIST_DIR}/precompiled.cmake)
-# Define helper to create per-module targets and register their objects for aggregation
+
+# Module Creation Function
+# -----------------------
 #
-# innodb_module(<module_dir>) performs:
-#   1) Gather sources for the module
-#   2) Create an OBJECT library to compile sources once with common flags/includes
-#   3) Register the OBJECT target so the final monolithic lib can aggregate all objects
+# innodb_module(module_dir)
 #
-# https://cmake.org/cmake/help/v3.31/command/target_link_libraries.html#id8
+# Creates an OBJECT library for the specified Embedded InnoDB module and registers
+# it for aggregation into the final library. This function handles the common pattern
+# of creating modular compilation units.
+#
+# Parameters:
+#   module_dir: Name of the module directory under innodb/src/ (e.g., "api", "buf")
+#
+# Creates:
+#   - OBJECT library: mod_${module_dir} (e.g., mod_api, mod_buf)
+#   - Registers objects for final library aggregation via INNODB_OBJ_TARGETS
+#
+# Features:
+#   - Automatic source discovery from module directory
+#   - Common include paths and compilation settings
+#   - GCOV coverage support when enabled
+#   - Position-independent code for shared library compatibility
+#
+# Reference: https://cmake.org/cmake/help/v3.31/command/target_link_libraries.html#id8
 #
 # ---------------------------------------------------------------------------------------------------------------------
 
-# Explicitly define the include directories according to its usage:
-# - public
-# - private
-# - generated (can be both public or private, in this case is just private)
+# Include Directory Configuration
+# -----------------------------
+# Define include directories with clear separation of public/private and generated headers.
+# This ensures proper encapsulation and prevents accidental exposure of internal headers.
 
+# Public Includes: API headers exposed to library users
 set(INNODB_PUBLIC_INCLUDE            "${CMAKE_SOURCE_DIR}/innodb/include"     )
-set(INNODB_PRIVATE_INCLUDE           "${CMAKE_SOURCE_DIR}/innodb/src/include" )
-set(INNODB_GENERATED_PRIVATE_INCLUDE "${CMAKE_BINARY_DIR}/innodb/include"     )
-set(INNODB_GENERATED_PUBLIC_INCLUDE  "${CMAKE_BINARY_DIR}/include"             )
 
+# Private Includes: Internal headers not exposed in public API
+set(INNODB_PRIVATE_INCLUDE           "${CMAKE_SOURCE_DIR}/innodb/src/include" )
+
+# Generated Private Includes: Build-generated headers for internal use
+set(INNODB_GENERATED_PRIVATE_INCLUDE "${INNODB_PRIVATE_GENERATED_INCLUDE_DIR}" )
+
+# Generated Public Includes: Build-generated headers that may be exposed
+set(INNODB_GENERATED_PUBLIC_INCLUDE  "${INNODB_PRIVATE_GENERATED_INCLUDE_DIR}" )
+
+# Common Include Set: All include directories used by modules
 set(INNODB_COMMON_INCLUDES "${INNODB_PUBLIC_INCLUDE}"
                            "${INNODB_PRIVATE_INCLUDE}"
                            "${INNODB_GENERATED_PRIVATE_INCLUDE}"
@@ -32,7 +113,7 @@ set(INNODB_COMMON_INCLUDES "${INNODB_PUBLIC_INCLUDE}"
 )
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Define per-module `object_target` (single compilation point for the module)
+# Per-Module Object Library Creation
 # ---------------------------------------------------------------------------------------------------------------------
 
 function(innodb_module module_dir)
@@ -62,7 +143,7 @@ function(innodb_module module_dir)
     set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS ${object_target})
 
     set_target_properties(${object_target} PROPERTIES FOLDER "innodb")
-    if(ENABLE_GCOV)
+    if(INNODB_ENABLE_GCOV)
         if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
             if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
                 message(WARNING "Coverage is best with Debug; current: ${CMAKE_BUILD_TYPE}")
@@ -81,22 +162,44 @@ endfunction()
 # end `innodb_module(module_dir)` function
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Generate Flex/Bison sources into the build tree (avoid polluting source dir)
+# SQL Parser Generation (Flex/Bison)
 # ---------------------------------------------------------------------------------------------------------------------
+# Generate C++ source files from SQL grammar definitions using Flex and Bison.
+# This creates the SQL parser used by Embedded InnoDB for query processing.
+#
+# Generated files are placed in the build directory to avoid polluting the source tree.
 
+# Output directory for generated parser files
 set(GEN_PARS_DIR ${CMAKE_BINARY_DIR}/innodb/generated/pars)
-file(MAKE_DIRECTORY ${GEN_PARS_DIR})
+file(MAKE_DIRECTORY ${GEN_PARS_DIR} ${INNODB_PRIVATE_GENERATED_INCLUDE_DIR})
 
+# Bison Grammar Processing
+# -----------------------
+# Generate parser from YACC grammar file
+bison_target(innodb_parser ${CMAKE_SOURCE_DIR}/innodb/src/pars/pars0grm.y
+             ${GEN_PARS_DIR}/pars0grm.cc
+             DEFINES_FILE ${INNODB_PRIVATE_GENERATED_INCLUDE_DIR}/pars0grm.h
+             VERBOSE ${GEN_PARS_DIR}/bison.log)
 
-bison_target(innodb_parser ${CMAKE_SOURCE_DIR}/innodb/src/pars/pars0grm.y  ${GEN_PARS_DIR}/pars0grm.cc DEFINES_FILE ${CMAKE_BINARY_DIR}/include/pars0grm.h VERBOSE ${GEN_PARS_DIR}/bison.log)
-flex_target(innodb_lexer   ${CMAKE_SOURCE_DIR}/innodb/src/pars/pars0lex.l  ${GEN_PARS_DIR}/lexyy.cc)
+# Flex Lexer Processing
+# --------------------
+# Generate lexer from lexical grammar file
+flex_target(innodb_lexer ${CMAKE_SOURCE_DIR}/innodb/src/pars/pars0lex.l
+            ${GEN_PARS_DIR}/lexyy.cc)
+
+# Dependency Management
+# --------------------
+# Ensure lexer is rebuilt when parser changes
 add_flex_bison_dependency(innodb_lexer innodb_parser)
 
+# SQL Parser Object Library
+# ------------------------
+# Create OBJECT library for generated parser sources
 add_library(innodb_sql OBJECT ${BISON_innodb_parser_OUTPUTS} ${FLEX_innodb_lexer_OUTPUTS})
 target_include_directories(innodb_sql PRIVATE
     ${CMAKE_SOURCE_DIR}/innodb/include
     ${CMAKE_SOURCE_DIR}/innodb/src/include
-    ${CMAKE_BINARY_DIR}/include
+    ${INNODB_PRIVATE_GENERATED_INCLUDE_DIR}  # Generated parser headers
     ${GEN_PARS_DIR}
 )
 set_target_properties(innodb_sql PROPERTIES FOLDER "innodb")
@@ -105,8 +208,11 @@ set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS innodb_sql)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Register all modules
+# Module Registration
 # ---------------------------------------------------------------------------------------------------------------------
+# Register all Embedded InnoDB modules for compilation. Each module represents a
+# functional area of the database engine. Modules are processed in dependency order
+# to ensure correct linking.
 innodb_module("ut")
 innodb_module("mach")
 innodb_module("os")
@@ -135,44 +241,74 @@ innodb_module("srv")
 innodb_module("usr")
 innodb_module("api")
 
-# Objective: Resolve all registered module OBJECT targets and expand them to object files
+# ---------------------------------------------------------------------------------------------------------------------
+# Final Library Assembly
+# ---------------------------------------------------------------------------------------------------------------------
+# Aggregate all compiled module objects into the final Embedded InnoDB libraries.
+# This creates both static and shared library variants from the same object files.
+
+# Object Collection
+# ----------------
+# Retrieve all registered OBJECT targets and expand them to object file references
 get_property(INNODB_OBJ_TARGETS GLOBAL PROPERTY INNODB_OBJ_TARGETS)
 
-# Ensure the pars module sees generated headers: add directory and order via innodb_sql already
-
-# Expand objects from all modules
+# Expand objects from all modules into a single list for library creation
 set(INNODB_ALL_OBJECTS)
 foreach(obj_tgt IN LISTS INNODB_OBJ_TARGETS)
     list(APPEND INNODB_ALL_OBJECTS $<TARGET_OBJECTS:${obj_tgt}>)
 endforeach()
 
-# Objective: Build the final monolithic static library from every module's objects
-# - Keeps per-module libs for modular linking/testing
-# - Provides a single aggregate `innodb` archive
+# Static Library Creation
+# ----------------------
+# Build the monolithic static library from all module objects
 add_library(innodb STATIC ${INNODB_ALL_OBJECTS})
 set_target_properties(innodb PROPERTIES FOLDER "innodb")
 target_compile_features(innodb PRIVATE cxx_std_23)
 target_compile_options(innodb PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
+
+# Public interface: Only expose public headers to consumers
 target_include_directories(innodb PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/innodb/include>)
+
+# Private includes: Internal headers only (not exposed to library users)
 target_include_directories(innodb PRIVATE
   ${CMAKE_SOURCE_DIR}/innodb/src/include
-  ${CMAKE_BINARY_DIR}/include
+  ${INNODB_GENERATED_PRIVATE_INCLUDE}
 )
-# Link to PCH interface library to get precompiled headers and common settings
-target_link_libraries(innodb PRIVATE innodb_pch)
 
+# Header File Set Management
+# -------------------------
+# Use FILE_SET for better header file organization (CMake 3.23+)
+target_sources(innodb PUBLIC FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_SOURCE_DIR}/innodb/include
+    FILES ${CMAKE_SOURCE_DIR}/innodb/include/innodb.h
+)
+
+# Link dependencies and precompiled headers
+target_link_libraries(innodb PRIVATE innodb_pch)
 target_link_libraries(innodb PUBLIC PkgConfig::LIBURING)
 target_compile_definitions(innodb PUBLIC HAVE_LIBURING)
 
-# Build a shared library from the same object files
+# Shared Library Creation
+# ----------------------
+# Build shared library variant from the same objects
 add_library(innodb_shared SHARED ${INNODB_ALL_OBJECTS})
 set_target_properties(innodb_shared PROPERTIES OUTPUT_NAME innodb FOLDER "innodb")
 target_compile_features(innodb_shared PRIVATE cxx_std_23)
 target_compile_options(innodb_shared PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
+
+# Same include configuration as static library
 target_include_directories(innodb_shared PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/innodb/include>)
 target_include_directories(innodb_shared PRIVATE
   ${CMAKE_SOURCE_DIR}/innodb/src/include
-  ${CMAKE_BINARY_DIR}/include
+  ${INNODB_GENERATED_PRIVATE_INCLUDE}
 )
+
+# Same header file set as static library
+target_sources(innodb_shared PUBLIC FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_SOURCE_DIR}/innodb/include
+    FILES ${CMAKE_SOURCE_DIR}/innodb/include/innodb.h
+)
+
+# Same dependencies as static library
 target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
 target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)

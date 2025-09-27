@@ -917,7 +917,7 @@ ib_err_t InnoDB::start() noexcept {
     log_info(std::format("system.ibd file size in the header is {} pages", size));
   }
 
-  log_info(std::format("InnoDB {} started; log sequence number {}", VERSION, srv_start_lsn));
+  log_info(std::format("InnoDB {} started; log sequence number {}", INNODB_VERSION, srv_start_lsn));
 
   if (srv_config.m_force_recovery != IB_RECOVERY_DEFAULT) {
     log_warn(std::format("!!! force_recovery is set to {} !!!", (int)srv_config.m_force_recovery));

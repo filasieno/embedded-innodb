@@ -7,9 +7,7 @@
             "generator": "Ninja Multi-Config",
             "binaryDir": "build",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "CMAKE_CONFIGURATION_TYPES": "Debug; Release"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
         {
@@ -18,11 +16,12 @@
             "displayName": "Debug",
 
             "cacheVariables": {
-                "ENABLE_UNIT_TESTING":        "ON",
-                "ENABLE_INTEGRATION_TESTING": "ON",
-                "ENABLE_XA":                  "OFF",
-                "ENABLE_GCOV":                "OFF",
-                "ENABLE_INNODB_LUA":          "OFF"
+                "INNODB_ENABLE_UNIT_TESTING":        "ON",
+                "INNODB_ENABLE_INTEGRATION_TESTING": "ON",
+                "INNODB_ENABLE_XA":                  "OFF",
+                "INNODB_ENABLE_GCOV":                "OFF",
+                "INNODB_ENABLE_LUA":                 "OFF"
+                
             }
         },
         {
