@@ -1,19 +1,36 @@
 # Main CMakeLists.txt - Orchestrates the build by including modular CMake files
 
+cmake_minimum_required(VERSION 3.24)
+project(embedded-innodb LANGUAGES C CXX)
+
+
 include(cmake/general_config.cmake)
 include(cmake/version.cmake)
 include(cmake/ci_matrix.cmake)
 include(cmake/config_checks.cmake)
-include(cmake/innodb_modules.cmake)
 
-# Include tests if enabled
+# ---------------------------------------------------------------------------------------------------------------------
+# InnoDB
+# ---------------------------------------------------------------------------------------------------------------------
+
+include(innodb/cmake/modules.cmake)
 if(ENABLE_UNIT_TESTING)
-    include(cmake/innodb_unit_tests.cmake)
+    include(innodb/cmake/unit_tests.cmake)
 endif()
-
 if(ENABLE_INTEGRATION_TESTING)
-    include(cmake/innodb_integration_tests.cmake)
+    include(innodb/cmake/integration_tests.cmake)
 endif()
+include(innodb/cmake/install.cmake)
 
-# Installation
-include(cmake/innodb_install.cmake)
+
+# ---------------------------------------------------------------------------------------------------------------------
+# InnoLua
+# ---------------------------------------------------------------------------------------------------------------------
+
+# todo
+
+# ---------------------------------------------------------------------------------------------------------------------
+# InnoBench
+# ---------------------------------------------------------------------------------------------------------------------
+
+# todo

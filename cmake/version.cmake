@@ -15,6 +15,3 @@ set(IB_API_VERSION_STRING "${API_VERSION}:${API_VERSION_REVISION}:${API_VERSION_
 message(STATUS "VERSION:               " ${VERSION})
 message(STATUS "IB_API_VERSION_STRING: " ${IB_API_VERSION_STRING})
 
-# ---------------------------------------------------------------------------------------------------------------------
-# end Library and API Versioning section
-# ---------------------------------------------------------------------------------------------------------------------

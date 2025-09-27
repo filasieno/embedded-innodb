@@ -1,6 +1,9 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # Embedded InnoDB module definitions
 # ---------------------------------------------------------------------------------------------------------------------
+
+# Include precompiled headers configuration
+include(${CMAKE_CURRENT_LIST_DIR}/precompiled.cmake)
 # Define helper to create per-module targets and register their objects for aggregation
 #
 # innodb_module(<module_dir>) performs:
@@ -16,16 +19,23 @@
 # - public
 # - private
 # - generated (can be both public or private, in this case is just private)
+
 set(INNODB_PUBLIC_INCLUDE            "${CMAKE_SOURCE_DIR}/innodb/include"     )
 set(INNODB_PRIVATE_INCLUDE           "${CMAKE_SOURCE_DIR}/innodb/src/include" )
 set(INNODB_GENERATED_PRIVATE_INCLUDE "${CMAKE_BINARY_DIR}/innodb/include"     )
+set(INNODB_GENERATED_PUBLIC_INCLUDE  "${CMAKE_BINARY_DIR}/include"             )
 
-set(INNODB_COMMON_INCLUDE  "${INNODB_PUBLIC_INCLUDE}"
+set(INNODB_COMMON_INCLUDES "${INNODB_PUBLIC_INCLUDE}"
                            "${INNODB_PRIVATE_INCLUDE}"
                            "${INNODB_GENERATED_PRIVATE_INCLUDE}"
-                           "PkgConfig::BS_THREAD_POOL_INCLUDE_DIRS"
-                           "PkgConfig::LIBURING_INCLUDE_DIRS"
+                           "${INNODB_GENERATED_PUBLIC_INCLUDE}"
+                           "${BS_THREAD_POOL_INCLUDE_DIR}"
+                           ${LIBURING_INCLUDE_DIRS}
 )
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Define per-module `object_target` (single compilation point for the module)
+# ---------------------------------------------------------------------------------------------------------------------
 
 function(innodb_module module_dir)
 
@@ -36,13 +46,15 @@ function(innodb_module module_dir)
     file(GLOB module_sources CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}/*.cc")
 
     # Create the object
-    add_library(${object_target} OBJECT)
+    add_library(${object_target} OBJECT ${module_sources})
 
     # Define the target include directories
     target_include_directories(${object_target} PRIVATE "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}" "${INNODB_COMMON_INCLUDES}")
 
     # Add external library dependecies
-    target_link_libraries(${object_target} PRIVATE "PkgConfig::LIBURING" "PkgConfig::BS_THREAD_POOL")
+    if(LIBURING_FOUND)
+        target_link_libraries(${object_target} PRIVATE PkgConfig::LIBURING)
+    endif()
 
     # ...
     target_compile_features(${object_target} PRIVATE cxx_std_23)
@@ -75,7 +87,34 @@ function(innodb_module module_dir)
 endfunction()
 # end `innodb_module(module_dir)` function
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Generate Flex/Bison sources into the build tree (avoid polluting source dir)
+# ---------------------------------------------------------------------------------------------------------------------
+
+set(GEN_PARS_DIR ${CMAKE_BINARY_DIR}/generated/pars)
+file(MAKE_DIRECTORY ${GEN_PARS_DIR})
+
+
+bison_target(innodb_parser ${CMAKE_SOURCE_DIR}/innodb/src/pars/pars0grm.y  ${GEN_PARS_DIR}/pars0grm.cc DEFINES_FILE ${CMAKE_BINARY_DIR}/include/pars0grm.h VERBOSE ${GEN_PARS_DIR}/bison.log)
+flex_target(innodb_lexer   ${CMAKE_SOURCE_DIR}/innodb/src/pars/pars0lex.l  ${GEN_PARS_DIR}/lexyy.cc)
+add_flex_bison_dependency(innodb_lexer innodb_parser)
+
+add_library(innodb_sql OBJECT ${BISON_innodb_parser_OUTPUTS} ${FLEX_innodb_lexer_OUTPUTS})
+target_link_libraries(innodb_sql PRIVATE innodb_pch)
+target_include_directories(innodb_sql PRIVATE
+    ${CMAKE_SOURCE_DIR}/innodb/include
+    ${CMAKE_SOURCE_DIR}/innodb/src/include
+    ${CMAKE_BINARY_DIR}/include
+    ${GEN_PARS_DIR}
+)
+set_target_properties(innodb_sql PROPERTIES FOLDER "innodb")
+set_target_properties(innodb_sql PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_property(GLOBAL APPEND PROPERTY INNODB_OBJ_TARGETS innodb_sql)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # Register all modules
+# ---------------------------------------------------------------------------------------------------------------------
 innodb_module("ut")
 innodb_module("mach")
 innodb_module("os")
@@ -126,10 +165,9 @@ target_include_directories(innodb PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/i
 target_include_directories(innodb PRIVATE
   ${CMAKE_SOURCE_DIR}/innodb/src/include
   ${CMAKE_BINARY_DIR}/include
-  ${BS_THREAD_POOL_INCLUDE_DIRS}
+  ${BS_THREAD_POOL_INCLUDE_DIR}
   ${LIBURING_INCLUDE_DIRS}
 )
-target_precompile_headers(innodb INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${CMAKE_SOURCE_DIR}/innodb/src/pch/innodb_pch.h> )
 
 if(LIBURING_FOUND)
     target_link_libraries(innodb PUBLIC PkgConfig::LIBURING)
@@ -145,7 +183,7 @@ target_include_directories(innodb_shared PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE
 target_include_directories(innodb_shared PRIVATE
   ${CMAKE_SOURCE_DIR}/innodb/src/include
   ${CMAKE_BINARY_DIR}/include
-  ${BS_THREAD_POOL_INCLUDE_DIRS}
+  ${BS_THREAD_POOL_INCLUDE_DIR}
   ${LIBURING_INCLUDE_DIRS}
 )
 if(LIBURING_FOUND)

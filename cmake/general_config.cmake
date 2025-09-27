@@ -2,9 +2,7 @@
 # General configuration
 # ---------------------------------------------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.24)
 
-project(embedded-innodb LANGUAGES C CXX)
 
 # C++ standard
 set(CMAKE_CXX_STANDARD            23)
@@ -37,8 +35,13 @@ find_package(PkgConfig REQUIRED)
 find_package(FLEX      REQUIRED)
 find_package(BISON     REQUIRED)
 
-pkg_check_modules(BS_THREAD_POOL REQUIRED bs-thread-pool)
-pkg_check_modules(LIBURING       IMPORTED_TARGET liburing)
+# For header-only bs-thread-pool, find headers directly
+find_path(BS_THREAD_POOL_INCLUDE_DIR BS_thread_pool.hpp PATH_SUFFIXES include)
+if(NOT BS_THREAD_POOL_INCLUDE_DIR)
+    message(FATAL_ERROR "BS_thread_pool.hpp not found. Please ensure bs-thread-pool is installed.")
+endif()
+
+pkg_check_modules(LIBURING IMPORTED_TARGET liburing)
 
 # OptionalL if available use `ccache`
 find_program(CCACHE_PROGRAM ccache)
