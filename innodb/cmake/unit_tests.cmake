@@ -26,17 +26,11 @@ if(GTEST_INCLUDE_DIRS)
     list(APPEND UNIT_TEST_COMMON_INCLUDES ${GTEST_INCLUDE_DIRS})
 endif()
 
-# Reuse library PCH for unit test common objects (native CMake PCH)
-target_link_libraries(unit_test_common PRIVATE innodb_pch)
+# Unit test common objects link to innodb which includes PCH
 
 function(innodb_gtest executable_name utest_folder)
     # Gather sources for this unit-test module
     file(GLOB unit_test_sources CONFIGURE_DEPENDS "${UNIT_TEST_SOURCE_DIR}/${utest_folder}/*.cc")
-
-    # If liburing is absent, drop any io_uring-specific tests from this module
-    if(NOT LIBURING_FOUND)
-        list(FILTER unit_test_sources EXCLUDE REGEX ".*/log_io_uring\\.cc$")
-    endif()
 
     # Create an OBJECT library for the module's tests
     set(obj_tgt "ut_obj_${executable_name}")
@@ -48,8 +42,6 @@ function(innodb_gtest executable_name utest_folder)
 
     target_include_directories(${obj_tgt} PRIVATE ${UNIT_TEST_COMMON_INCLUDES} "${UNIT_TEST_SOURCE_DIR}/${utest_folder}")
     target_compile_definitions(${obj_tgt} PRIVATE UNIV_BTR_PRINT UNIT_TESTING)
-    # Reuse the library PCH for all unit-test module compilations
-    target_link_libraries(${obj_tgt} PRIVATE innodb_pch)
     set_target_properties(${obj_tgt} PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
     # Register the object target for aggregation later
@@ -100,25 +92,25 @@ endforeach()
 add_executable(utest $<TARGET_OBJECTS:unit_test_common> ${UNIT_TEST_ALL_OBJECTS})
 target_include_directories(utest PRIVATE ${UNIT_TEST_COMMON_INCLUDES})
 target_compile_definitions(utest PRIVATE UNIV_BTR_PRINT UNIT_TESTING)
-target_link_libraries(utest PRIVATE unit_test_common ${unit_test_common_libs} innodb_pch)
+target_link_libraries(utest PRIVATE unit_test_common ${unit_test_common_libs})
 if(ENABLE_GCOV)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_link_options(utest PRIVATE --coverage)
     endif()
 endif()
-set_target_properties(utest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin)
+set_target_properties(utest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/bin/utests)
 set_target_properties(utest PROPERTIES FOLDER ${UNIT_TEST_TARGET_FOLDER})
 
 include(CTest)
 include(GoogleTest)
 
 gtest_discover_tests(utest
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/unit_tests/bin
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/bin/utests
     DISCOVERY_TIMEOUT 30
     PROPERTIES
         LABELS "unit"
         TIMEOUT 120
-    XML_OUTPUT_DIR ${CMAKE_BINARY_DIR}/test-results/unit
+    XML_OUTPUT_DIR ${CMAKE_BINARY_DIR}/innodb/bin/utests/test-results
 )
 
 # Convenience target: generate gcovr HTML and XML reports after tests

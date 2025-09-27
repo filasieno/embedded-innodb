@@ -41,7 +41,10 @@ if(NOT BS_THREAD_POOL_INCLUDE_DIR)
     message(FATAL_ERROR "BS_thread_pool.hpp not found. Please ensure bs-thread-pool is installed.")
 endif()
 
-pkg_check_modules(LIBURING IMPORTED_TARGET liburing)
+pkg_check_modules(LIBURING REQUIRED IMPORTED_TARGET liburing)
+if(NOT LIBURING_FOUND)
+    message(FATAL_ERROR "liburing is required but not found. Please install liburing development headers.")
+endif()
 
 # OptionalL if available use `ccache`
 find_program(CCACHE_PROGRAM ccache)

@@ -52,15 +52,10 @@ function(innodb_module module_dir)
     target_include_directories(${object_target} PRIVATE "${CMAKE_SOURCE_DIR}/innodb/src/${module_dir}" "${INNODB_COMMON_INCLUDES}")
 
     # Add external library dependecies
-    if(LIBURING_FOUND)
-        target_link_libraries(${object_target} PRIVATE PkgConfig::LIBURING)
-    endif()
+    target_link_libraries(${object_target} PRIVATE PkgConfig::LIBURING)
 
     # ...
     target_compile_features(${object_target} PRIVATE cxx_std_23)
-
-    # ...
-    target_link_libraries(${object_target} PRIVATE innodb_pch)
 
     # Ensure position independent code so objects can link into shared libs
     set_target_properties(${object_target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -91,7 +86,7 @@ endfunction()
 # Generate Flex/Bison sources into the build tree (avoid polluting source dir)
 # ---------------------------------------------------------------------------------------------------------------------
 
-set(GEN_PARS_DIR ${CMAKE_BINARY_DIR}/generated/pars)
+set(GEN_PARS_DIR ${CMAKE_BINARY_DIR}/innodb/generated/pars)
 file(MAKE_DIRECTORY ${GEN_PARS_DIR})
 
 
@@ -100,7 +95,6 @@ flex_target(innodb_lexer   ${CMAKE_SOURCE_DIR}/innodb/src/pars/pars0lex.l  ${GEN
 add_flex_bison_dependency(innodb_lexer innodb_parser)
 
 add_library(innodb_sql OBJECT ${BISON_innodb_parser_OUTPUTS} ${FLEX_innodb_lexer_OUTPUTS})
-target_link_libraries(innodb_sql PRIVATE innodb_pch)
 target_include_directories(innodb_sql PRIVATE
     ${CMAKE_SOURCE_DIR}/innodb/include
     ${CMAKE_SOURCE_DIR}/innodb/src/include
@@ -168,11 +162,11 @@ target_include_directories(innodb PRIVATE
   ${BS_THREAD_POOL_INCLUDE_DIR}
   ${LIBURING_INCLUDE_DIRS}
 )
+# Link to PCH interface library to get precompiled headers and common settings
+target_link_libraries(innodb PRIVATE innodb_pch)
 
-if(LIBURING_FOUND)
-    target_link_libraries(innodb PUBLIC PkgConfig::LIBURING)
-    target_compile_definitions(innodb PUBLIC HAVE_LIBURING)
-endif()
+target_link_libraries(innodb PUBLIC PkgConfig::LIBURING)
+target_compile_definitions(innodb PUBLIC HAVE_LIBURING)
 
 # Build a shared library from the same object files
 add_library(innodb_shared SHARED ${INNODB_ALL_OBJECTS})
@@ -186,10 +180,8 @@ target_include_directories(innodb_shared PRIVATE
   ${BS_THREAD_POOL_INCLUDE_DIR}
   ${LIBURING_INCLUDE_DIRS}
 )
-if(LIBURING_FOUND)
-    target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
-    target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)
-endif()
+target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
+target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # end Embedded InnoDB module definitions

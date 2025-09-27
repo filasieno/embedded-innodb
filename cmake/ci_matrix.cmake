@@ -49,6 +49,7 @@ message(STATUS "ENABLE_UNIT_TESTING         " ${ENABLE_UNIT_TESTING})
 message(STATUS "ENABLE_INTEGRATION_TESTING  " ${ENABLE_INTEGRATION_TESTING})
 message(STATUS "ENABLE_XA                   " ${ENABLE_XA})
 message(STATUS "ENABLE_INNODB_LUA           " ${ENABLE_INNODB_LUA})
+message(STATUS "LIBURING_VERSION            " ${LIBURING_VERSION})
 
 # ---------------------------------------------------------------------------------------------------------------------
 # end Setup CI Build Matrix and Build options

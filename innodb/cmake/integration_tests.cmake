@@ -6,6 +6,7 @@ set(INTEGRATION_TEST_TARGET_FOLDER     "Integration Tests")
 set(INTEGRATION_TEST_LIBS              pthread m)
 set(INTEGRATION_TEST_ROOT_DIR          "${CMAKE_SOURCE_DIR}/innodb/tests")
 set(INTEGRATION_TEST_SOURCE_DIR        "${INTEGRATION_TEST_ROOT_DIR}/src")
+set(INTEGRATION_TEST_BINARY_DIR        "${CMAKE_BINARY_DIR}/innodb/bin/tests")
 set(INTEGRATION_TEST_COMMON_INCLUDES   "${CMAKE_SOURCE_DIR}/innodb/include"
                                        "${CMAKE_SOURCE_DIR}/innodb/src/include"
                                        "${CMAKE_BINARY_DIR}/include"
@@ -20,14 +21,13 @@ add_library(integration_test_common OBJECT ${integration_test_common_sources})
 target_include_directories(integration_test_common PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
 set_target_properties(integration_test_common PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
 # Reuse library PCH in integration test common
-target_link_libraries(integration_test_common PRIVATE innodb_pch)
 
 # Integration Test Cconfiguration: `ib_cfg`
 function(innodb_integration_test executable_name main_src_file)
     add_executable(${executable_name} $<TARGET_OBJECTS:integration_test_common> ${INTEGRATION_TEST_SOURCE_DIR}/${main_src_file})
     target_include_directories(${executable_name} PRIVATE ${INTEGRATION_TEST_COMMON_INCLUDES})
-    target_link_libraries(${executable_name} PRIVATE integration_test_common innodb ${INTEGRATION_TEST_LIBS} innodb_pch)
-    set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests/bin)
+    target_link_libraries(${executable_name} PRIVATE integration_test_common innodb ${INTEGRATION_TEST_LIBS})
+    set_target_properties(${executable_name} PROPERTIES  RUNTIME_OUTPUT_DIRECTORY ${INTEGRATION_TEST_BINARY_DIR})
     set_target_properties(${executable_name} PROPERTIES FOLDER ${INTEGRATION_TEST_TARGET_FOLDER})
     if(ENABLE_GCOV)
         target_link_libraries(${executable_name} PRIVATE gcov)
