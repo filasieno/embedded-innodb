@@ -33,10 +33,9 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 
-include(cmake/config.cmake)
+include(cmake/build_config.cmake)
 include(cmake/version.cmake)
 include(cmake/ci_matrix.cmake)
-include(cmake/config_checks.cmake)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # InnoDB
@@ -68,19 +67,32 @@ function(innodb_validate_build_config)
     endif()
 
     # Sanitizer validation
-    if(INNODB_ENABLE_SANITIZERS)
+    set(enabled_sanitizers "")
+    if(INNODB_ENABLE_ASAN)
+        list(APPEND enabled_sanitizers "ASAN")
+    endif()
+    if(INNODB_ENABLE_TSAN)
+        list(APPEND enabled_sanitizers "TSAN")
+    endif()
+    if(INNODB_ENABLE_UBSAN)
+        list(APPEND enabled_sanitizers "UBSAN")
+    endif()
+
+    if(enabled_sanitizers)
+        # Check for environment variable conflicts with enabled sanitizers
         set(sanitizer_vars ASAN_OPTIONS TSAN_OPTIONS UBSAN_OPTIONS)
-        set(active_sanitizers 0)
+        set(active_env_sanitizers 0)
 
         foreach(var IN LISTS sanitizer_vars)
             if(DEFINED ENV{${var}})
-                math(EXPR active_sanitizers "${active_sanitizers} + 1")
+                math(EXPR active_env_sanitizers "${active_env_sanitizers} + 1")
             endif()
         endforeach()
 
-        if(active_sanitizers GREATER 1)
-            message(WARNING "Multiple sanitizers detected. This may cause conflicts.")
-            message(WARNING "Consider using only one sanitizer at a time.")
+        if(active_env_sanitizers GREATER 1)
+            message(FATAL_ERROR "Multiple sanitizers detected in environment variables. "
+                               "Sanitizers are incompatible with each other. "
+                               "Please set only one sanitizer environment variable at a time.")
         endif()
 
         if(INNODB_ENABLE_IPO)

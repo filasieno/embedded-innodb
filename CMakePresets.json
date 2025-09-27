@@ -14,14 +14,21 @@
             "name":        "debug",
             "inherits":    "base",
             "displayName": "Debug",
+            "description": "Complete debug build configuration with all options documented",
 
             "cacheVariables": {
+                "INNODB_ENABLE_GCOV":                "OFF",
                 "INNODB_ENABLE_UNIT_TESTING":        "ON",
                 "INNODB_ENABLE_INTEGRATION_TESTING": "ON",
-                "INNODB_ENABLE_XA":                  "OFF",
-                "INNODB_ENABLE_GCOV":                "OFF",
-                "INNODB_ENABLE_LUA":                 "OFF"
-                
+                "INNODB_ENABLE_XA":                  "ON",
+                "INNODB_ENABLE_LUA":                 "ON",
+                "INNODB_ENABLE_ASAN":                "OFF",
+                "INNODB_ENABLE_TSAN":                "OFF",
+                "INNODB_ENABLE_UBSAN":               "OFF",
+                "INNODB_ENABLE_UNITY_BUILD":         "OFF",
+                "INNODB_ENABLE_IPO":                 "OFF",
+                "INNODB_ENABLE_CCACHE":              "ON",
+                "INNODB_ENABLE_CLANG_TIDY":          "OFF"
             }
         },
         {

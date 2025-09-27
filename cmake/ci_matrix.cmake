@@ -2,17 +2,44 @@
 # CI Build Matrix and Build Options Configuration
 # ---------------------------------------------------------------------------------------------------------------------
 #
-# This file configures the build matrix options for Embedded InnoDB, including:
-# - Build types (Debug/Release)
-# - Platform-specific definitions
-# - Compilation flags and warnings
-# - Feature toggles for various optional components
-# - Dependency checks and configuration
+# This file configures the build matrix options and feature toggles for Embedded InnoDB.
+# It handles platform-specific settings, compilation options, and build configuration validation.
+#
+# The configuration is organized into the following sections:
+# 1. Build Types Configuration
+# 2. Platform-Specific Configuration
+# 3. Debug Build Configuration
+# 4. Compiler-Specific Options
+# 5. GCC-Specific Configuration
+# 6. Feature Toggle Options
+# 7. Build Configuration Validation
+# 8. Configuration Summary Report
+#
+# Feature Options Overview:
+# -----------------------
+# Core Features:
+# - INNODB_ENABLE_UNIT_TESTING: Enable unit test compilation and execution
+# - INNODB_ENABLE_INTEGRATION_TESTING: Enable integration test compilation and execution
+# - INNODB_ENABLE_XA: Enable XA transaction support for distributed transactions
+# - INNODB_ENABLE_LUA: Enable Lua scripting bindings for stored procedures
+#
+# Debugging and Analysis:
+# - INNODB_ENABLE_GCOV: Enable GCOV code coverage analysis (requires Debug build)
+# - INNODB_ENABLE_ASAN: Enable Address Sanitizer to detect memory errors (Clang only)
+# - INNODB_ENABLE_TSAN: Enable Thread Sanitizer to detect data races (Clang only)
+# - INNODB_ENABLE_UBSAN: Enable Undefined Behavior Sanitizer (Clang only)
+#
+# Performance and Build Optimization:
+# - INNODB_ENABLE_UNITY_BUILD: Enable unity builds for faster compilation
+# - INNODB_ENABLE_IPO: Enable Interprocedural Optimization (LTO) for better performance
+# - INNODB_ENABLE_CCACHE: Enable ccache for faster rebuilds
+# - INNODB_ENABLE_CLANG_TIDY: Enable clang-tidy static analysis
 #
 # All project-specific options use the INNODB_* prefix for consistency.
 
-# Build Types Configuration
-# -----------------------
+# ====================================================================================================================
+# 1. Build Types Configuration
+# ====================================================================================================================
 # Configure available build types and set Debug as default.
 # VALID_BUILD_TYPES: List of supported build configurations
 if(NOT CMAKE_CONFIGURATION_TYPES)
@@ -23,25 +50,29 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${VALID_BUILD_TYPES})
 endif()
 
-# Platform-Specific Configuration
-# -----------------------------
+# ====================================================================================================================
+# 2. Platform-Specific Configuration
+# ====================================================================================================================
 # Define platform-specific preprocessor macros
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     add_definitions(-DUNIV_LINUX)
 endif()
 
-# Debug Build Configuration
-# ------------------------
+# ====================================================================================================================
+# 3. Debug Build Configuration
+# ====================================================================================================================
 # Enable debug-specific features and assertions in Debug builds
 add_compile_definitions($<$<CONFIG:Debug>:UNIV_DEBUG>)
 
-# Compiler-Specific Options
-# ------------------------
+# ====================================================================================================================
+# 4. Compiler-Specific Options
+# ====================================================================================================================
 # Suppress Clang-specific warnings for tautological comparisons in constexpr expressions
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
 
-# GCC-Specific Configuration
-# -------------------------
+# ====================================================================================================================
+# 5. GCC-Specific Configuration
+# ====================================================================================================================
 # Handle GCC-specific issues with _FORTIFY_SOURCE in Debug/coverage builds.
 # FORTIFY_SOURCE requires optimization flags (-O1+) but coverage forces -O0,
 # so we disable it to avoid compilation warnings/errors.
@@ -52,23 +83,27 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-# Feature Toggle Options
-# ---------------------
+# ====================================================================================================================
+# 6. Feature Toggle Options
+# ====================================================================================================================
 # Configure optional build features and components.
 # All options use INNODB_* prefix for consistency with project naming conventions.
-option(INNODB_ENABLE_GCOV                "Enable GCOV code coverage (requires Debug build)" OFF)
-option(INNODB_ENABLE_UNIT_TESTING        "Enable unit test compilation and execution"       ON)
+option(INNODB_ENABLE_GCOV                "Enable GCOV code coverage (requires Debug build)"  OFF)
+option(INNODB_ENABLE_UNIT_TESTING        "Enable unit test compilation and execution"        ON)
 option(INNODB_ENABLE_INTEGRATION_TESTING "Enable integration test compilation and execution" ON)
-option(INNODB_ENABLE_XA                  "Enable XA transaction support"                    ON)
-option(INNODB_ENABLE_LUA                 "Enable Lua scripting bindings"                    ON)
-option(INNODB_ENABLE_SANITIZERS          "Enable sanitizers (ASAN, TSAN, UBSAN)"            OFF)
-option(INNODB_ENABLE_UNITY_BUILD         "Enable unity builds for faster compilation"       OFF)
-option(INNODB_ENABLE_IPO                 "Enable Interprocedural Optimization (LTO)"        OFF)
-option(INNODB_ENABLE_CCACHE              "Enable ccache for faster rebuilds"                ON)
-option(INNODB_ENABLE_CLANG_TIDY          "Enable clang-tidy static analysis"                OFF)
+option(INNODB_ENABLE_XA                  "Enable XA transaction support"                     ON)
+option(INNODB_ENABLE_LUA                 "Enable Lua scripting bindings"                     ON)
+option(INNODB_ENABLE_ASAN                "Enable Clang Address Sanitizer (ASAN)"             OFF)
+option(INNODB_ENABLE_TSAN                "Enable Clang Thread Sanitizer (TSAN)"              OFF)
+option(INNODB_ENABLE_UBSAN               "Enable Clang Undefined Behavior Sanitizer (UBSAN)" OFF)
+option(INNODB_ENABLE_UNITY_BUILD         "Enable unity builds for faster compilation"        OFF)
+option(INNODB_ENABLE_IPO                 "Enable Interprocedural Optimization (LTO)"         OFF)
+option(INNODB_ENABLE_CCACHE              "Enable ccache for faster rebuilds"                 ON)
+option(INNODB_ENABLE_CLANG_TIDY          "Enable clang-tidy static analysis"                 OFF)
 
-# Build Configuration Validation
-# -----------------------------
+# ====================================================================================================================
+# 7. Build Configuration Validation
+# ====================================================================================================================
 # Validate option combinations and provide helpful error messages
 
 # Coverage requires Debug build
@@ -77,32 +112,45 @@ if(INNODB_ENABLE_GCOV AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(WARNING "Consider setting CMAKE_BUILD_TYPE to Debug for meaningful coverage results")
 endif()
 
-# Sanitizers are typically incompatible with each other
-if(INNODB_ENABLE_SANITIZERS)
-    set(SANITIZER_COUNT 0)
-    if(DEFINED ENV{ASAN_OPTIONS} OR "$ENV{ASAN_OPTIONS}" STREQUAL "")
-        math(EXPR SANITIZER_COUNT "${SANITIZER_COUNT} + 1")
-    endif()
-    if(DEFINED ENV{TSAN_OPTIONS} OR "$ENV{TSAN_OPTIONS}" STREQUAL "")
-        math(EXPR SANITIZER_COUNT "${SANITIZER_COUNT} + 1")
-    endif()
-    if(DEFINED ENV{UBSAN_OPTIONS} OR "$ENV{UBSAN_OPTIONS}" STREQUAL "")
-        math(EXPR SANITIZER_COUNT "${SANITIZER_COUNT} + 1")
+# Sanitizer validation
+set(ENABLED_SANITIZERS "")
+if(INNODB_ENABLE_ASAN)
+    list(APPEND ENABLED_SANITIZERS "ASAN")
+endif()
+if(INNODB_ENABLE_TSAN)
+    list(APPEND ENABLED_SANITIZERS "TSAN")
+endif()
+if(INNODB_ENABLE_UBSAN)
+    list(APPEND ENABLED_SANITIZERS "UBSAN")
+endif()
+
+# Check if any sanitizers are enabled
+if(ENABLED_SANITIZERS)
+    # Ensure only Clang compiler is used with sanitizers
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        message(FATAL_ERROR "Sanitizers are only supported with Clang compiler. "
+                           "Current compiler: ${CMAKE_CXX_COMPILER_ID}. "
+                           "Enabled sanitizers: ${ENABLED_SANITIZERS}")
     endif()
 
+    # Sanitizers are typically incompatible with each other
+    list(LENGTH ENABLED_SANITIZERS SANITIZER_COUNT)
     if(SANITIZER_COUNT GREATER 1)
-        message(WARNING "Multiple sanitizers detected in environment. This may cause issues.")
-        message(WARNING "Consider using only one sanitizer at a time for best results.")
+        message(FATAL_ERROR "Multiple sanitizers enabled: ${ENABLED_SANITIZERS}. "
+                           "Sanitizers are incompatible with each other. "
+                           "Please enable only one sanitizer at a time.")
     endif()
 endif()
 
 # IPO/LTO may conflict with some debugging features
-if(INNODB_ENABLE_IPO AND INNODB_ENABLE_SANITIZERS)
+if(INNODB_ENABLE_IPO AND ENABLED_SANITIZERS)
     message(WARNING "Interprocedural Optimization (IPO/LTO) with sanitizers may reduce sanitizer effectiveness")
 endif()
 
-# Report all options
-# Add to cmake/ci_matrix.cmake
+# ====================================================================================================================
+# 8. Configuration Summary Report
+# ====================================================================================================================
+# Display comprehensive build configuration summary
 message(STATUS "")
 message(STATUS "=== Embedded InnoDB Configuration Summary ===")
 message(STATUS "Version:                  ${INNODB_VERSION}")
@@ -117,7 +165,9 @@ message(STATUS "  Integration Tests:            ${INNODB_ENABLE_INTEGRATION_TEST
 message(STATUS "  GCOV Coverage:                ${INNODB_ENABLE_GCOV}")
 message(STATUS "  XA Support:                   ${INNODB_ENABLE_XA}")
 message(STATUS "  Lua Bindings:                 ${INNODB_ENABLE_LUA}")
-message(STATUS "  Sanitizers:                   ${INNODB_ENABLE_SANITIZERS}")
+message(STATUS "  Address Sanitizer (ASAN):     ${INNODB_ENABLE_ASAN}")
+message(STATUS "  Thread Sanitizer (TSAN):      ${INNODB_ENABLE_TSAN}")
+message(STATUS "  UBSanitizer (UBSAN):          ${INNODB_ENABLE_UBSAN}")
 message(STATUS "  Unity Build:                  ${INNODB_ENABLE_UNITY_BUILD}")
 message(STATUS "  Interprocedural Optimization: ${INNODB_ENABLE_IPO}")
 message(STATUS "  ccache:                       ${INNODB_ENABLE_CCACHE}")

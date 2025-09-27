@@ -4,12 +4,12 @@
 
 - [x] setup doxygen generation
 - [ ] setup benchmarks
-- [ ] setup unit tests
-- [ ] setup integration tests
+- [x] setup unit tests
+- [x] setup integration tests
 - [ ] write innolua
 - [ ] write innobench
 - [ ] clean up scripts (all must have help documentation)
-- [ ] setup clang sanitizers
+- [x] setup clang sanitizers
 - [ ] setup clang coverage
 - [ ] setup gcc   coverage
 - [ ] setup gcc   coverage report
@@ -53,7 +53,3 @@
     - data
     - src
     - doc
-
-
-rewrap revived (ALT+Q)
-

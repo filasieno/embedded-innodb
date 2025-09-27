@@ -288,6 +288,13 @@ target_link_libraries(innodb PRIVATE innodb_pch)
 target_link_libraries(innodb PUBLIC PkgConfig::LIBURING)
 target_compile_definitions(innodb PUBLIC HAVE_LIBURING)
 
+# Add sanitizer link options when enabled
+target_link_options(innodb PRIVATE
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_ASAN}>>:-fsanitize=address>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_TSAN}>>:-fsanitize=thread>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_UBSAN}>>:-fsanitize=undefined>
+)
+
 # Shared Library Creation
 # ----------------------
 # Build shared library variant from the same objects
@@ -312,3 +319,10 @@ target_sources(innodb_shared PUBLIC FILE_SET HEADERS
 # Same dependencies as static library
 target_link_libraries(innodb_shared PUBLIC PkgConfig::LIBURING)
 target_compile_definitions(innodb_shared PUBLIC HAVE_LIBURING)
+
+# Add sanitizer link options when enabled
+target_link_options(innodb_shared PRIVATE
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_ASAN}>>:-fsanitize=address>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_TSAN}>>:-fsanitize=thread>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_UBSAN}>>:-fsanitize=undefined>
+)

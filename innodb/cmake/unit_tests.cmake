@@ -1,6 +1,61 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# Unit Test Configuration
+# Unit Test Configuration and Infrastructure
 # ---------------------------------------------------------------------------------------------------------------------
+#
+# This file configures comprehensive unit testing for Embedded InnoDB using Google Test framework.
+# Unit tests validate individual components and modules in isolation, providing fast feedback during
+# development and ensuring code quality through automated regression testing.
+#
+# Unit tests are crucial for maintaining code quality because they:
+# - Catch regressions early in the development cycle
+# - Serve as executable documentation of expected behavior
+# - Enable safe refactoring by providing confidence in changes
+# - Run quickly (seconds) compared to integration tests (minutes)
+# - Allow testing edge cases that are difficult to reproduce manually
+#
+# ARCHITECTURAL DECISIONS:
+# ----------------------
+# 1. OBJECT Library Pattern: Using OBJECT libraries instead of static libraries avoids
+#    linking issues and enables efficient incremental builds during development.
+#
+# 2. Module-Specific Test Organization: Each InnoDB module (btr, dict, trx, etc.) has
+#    dedicated test suites, making it easier to understand what functionality is being tested.
+#
+# 3. Common Test Infrastructure: Shared test utilities and setup code are centralized
+#    to avoid duplication and ensure consistent test behavior across modules.
+#
+# 4. Aggregated Test Execution: All unit tests are combined into a single executable
+#    for efficient CI/CD pipeline execution.
+#
+# DEPENDENCIES AND INTEGRATION:
+# ----------------------------
+# - Google Test: Industry-standard C++ testing framework
+# - BS Thread Pool: Required for async operations in test infrastructure
+# - GTest Integration: Automatic test discovery and XML reporting for CI systems
+#
+# CONFIGURATION VARIABLES:
+# ----------------------
+# Test organization and output directories are configured here for consistency
+# across all test suites and CI environments.
+#
+# The configuration is organized into the following sections:
+# 1. Common Test Infrastructure Setup
+# 2. Test Creation Utilities
+# 3. Module Test Registration
+# 4. Test Executable Aggregation
+# 5. Coverage and Reporting Configuration
+
+
+# ====================================================================================================================
+# 1. Common Test Infrastructure Setup
+# ====================================================================================================================
+#
+# WHY COMMON INFRASTRUCTURE:
+# -------------------------
+# Many tests require similar setup code (database initialization, mock objects, etc.).
+# Centralizing this infrastructure ensures consistency, reduces duplication, and makes
+# maintenance easier when test patterns change.
+#
 
 # ---------------------------------------------------------------------------------------------------------------------
 # innodb_setup_test_common
@@ -11,10 +66,10 @@
 # Creates a common test infrastructure OBJECT library.
 #
 # Parameters:
-#   name: Name of the test common library
-#   source_glob: GLOB pattern for source files
-#   include_dirs: Include directories for the library
-#   target_folder: IDE folder for organization
+#   name:               Name of the test common library
+#   source_glob:        GLOB pattern for source files
+#   include_dirs:       Include directories for the library
+#   target_folder:      IDE folder for organization
 #   extra_compile_defs: Optional additional compile definitions
 #
 function(innodb_setup_test_common name source_glob include_dirs target_folder)
@@ -68,37 +123,20 @@ function(innodb_create_object_library name source_files include_dirs)
     endforeach()
 endfunction()
 
+# ====================================================================================================================
+# 2. Test Creation Utilities
+# ====================================================================================================================
+#
+# WHY UTILITY FUNCTIONS:
+# ---------------------
+# CMake functions encapsulate common patterns and reduce boilerplate code.
+# These utilities ensure consistent test setup across all modules while
+# allowing customization where needed.
+#
+
 # ---------------------------------------------------------------------------------------------------------------------
-#
-# This file configures unit testing for Embedded InnoDB using Google Test framework.
-# Unit tests validate individual components and modules in isolation.
-#
-# Architecture:
-# - Per-module test libraries (OBJECT libraries for efficient compilation)
-# - Aggregated test executable combining all unit tests
-# - GTest integration with discovery and reporting
-# - Optional coverage reporting with gcovr
-#
-# Test Organization:
-# - Common test infrastructure in unit_test_common
-# - Module-specific tests in unit-tests/src/modules/
-# - Automatic test registration and execution
-#
-# Dependencies: GTest, gcovr (optional for coverage)
-
-# Configuration Variables
-# ----------------------
-set(INNODB_UNIT_TEST_TARGET_FOLDER   "Unit Tests")  # IDE folder organization
-set(INNODB_UNIT_TEST_ROOT_DIR        "${CMAKE_SOURCE_DIR}/innodb/unit-tests")
-set(INNODB_UNIT_TEST_SOURCE_DIR      "${INNODB_UNIT_TEST_ROOT_DIR}/src")
-set(INNODB_UNIT_TEST_COMMON_INCLUDES "${CMAKE_SOURCE_DIR}/innodb/include"
-                                     "${CMAKE_SOURCE_DIR}/innodb/src/include"
-                                     "${INNODB_PRIVATE_GENERATED_INCLUDE_DIR}"
-                                     "${INNODB_UNIT_TEST_SOURCE_DIR}/common")
-
-# Common Test Infrastructure
-# -------------------------
-# Create OBJECT library for shared test utilities and setup using common function
+# innodb_create_object_library
+# ---------------------------------------------------------------------------------------------------------------------
 innodb_setup_test_common(
     unit_test_common
     "${INNODB_UNIT_TEST_SOURCE_DIR}/common/*.cc"
@@ -123,8 +161,33 @@ endif()
 
 # Link Dependencies
 # ----------------
-# Connect to BS Thread Pool for test infrastructure
+# WHY BS THREAD POOL DEPENDENCY:
+# -----------------------------
+# Unit tests may need to simulate asynchronous operations or multi-threading scenarios.
+# The BS Thread Pool library provides a reliable, high-performance thread pool implementation
+# that's used throughout Embedded InnoDB for async operations.
+#
 target_link_libraries(unit_test_common PRIVATE PkgConfig::BS_THREAD_POOL)
+
+# ====================================================================================================================
+# 3. Module Test Registration
+# ====================================================================================================================
+#
+# WHY MODULE-SPECIFIC TESTS:
+# -------------------------
+# Embedded InnoDB is organized into distinct modules (btr for B-trees, dict for data dictionary,
+# trx for transactions, etc.). Testing each module in isolation ensures that:
+# - Module boundaries are respected and tested
+# - Changes to one module don't unexpectedly break another
+# - Test failures clearly indicate which component has issues
+# - Developers can focus testing efforts on specific functionality
+#
+# WHY AUTOMATED REGISTRATION:
+# --------------------------
+# Manual registration of each test module would be error-prone and hard to maintain.
+# The innodb_gtest function automates this process while providing flexibility
+# for module-specific customization when needed.
+#
 
 # Module Test Creation Function
 # ----------------------------
@@ -133,6 +196,15 @@ target_link_libraries(unit_test_common PRIVATE PkgConfig::BS_THREAD_POOL)
 #
 # Creates an OBJECT library for unit tests targeting a specific Embedded InnoDB module.
 # This function handles the common pattern of creating per-module test compilation units.
+#
+# WHY OBJECT LIBRARIES FOR TESTS:
+# -----------------------------
+# OBJECT libraries allow CMake to compile test sources without linking them immediately.
+# This approach provides several benefits:
+# - Efficient incremental builds during development
+# - Avoids static library linking issues during frequent test changes
+# - Enables better parallel compilation
+# - Allows for flexible test aggregation strategies
 #
 # Parameters:
 #   executable_name: Base name for the test target (e.g., "utest_api")
@@ -146,7 +218,12 @@ function(innodb_gtest executable_name utest_folder)
     # Gather sources for this unit-test module
     file(GLOB unit_test_sources CONFIGURE_DEPENDS "${INNODB_UNIT_TEST_SOURCE_DIR}/${utest_folder}/*.cc")
 
-    # Create an OBJECT library for the module's tests
+    # WHY CONDITIONAL LIBRARY CREATION:
+    # ---------------------------------
+    # Not all modules may have tests yet, especially during initial development.
+    # Creating empty OBJECT libraries ensures the build system remains consistent
+    # and allows for incremental test development.
+    #
     set(obj_tgt "ut_obj_${executable_name}")
     if(unit_test_sources STREQUAL "")
         add_library(${obj_tgt} OBJECT)
@@ -158,13 +235,29 @@ function(innodb_gtest executable_name utest_folder)
     target_compile_definitions(${obj_tgt} PRIVATE UNIV_BTR_PRINT UNIT_TESTING)
     set_target_properties(${obj_tgt} PROPERTIES FOLDER ${INNODB_UNIT_TEST_TARGET_FOLDER})
 
-    # Register the object target for aggregation later
+    # WHY GLOBAL PROPERTY REGISTRATION:
+    # ---------------------------------
+    # CMake properties provide a clean way to collect targets across function calls.
+    # This pattern allows us to aggregate all test objects into a single executable
+    # without maintaining complex lists manually.
+    #
     set_property(GLOBAL APPEND PROPERTY INNODB_UNIT_TEST_OBJ_TARGETS ${obj_tgt})
 endfunction()
 
-# ---------------------------------------------------------------------------------------------------------------------
-# Integration tests configuration
-# ---------------------------------------------------------------------------------------------------------------------
+# Module Test Suite Registration
+# -----------------------------
+# WHY THESE SPECIFIC MODULES:
+# ---------------------------
+# These modules represent the core components of Embedded InnoDB that require
+# thorough unit testing. Each module handles critical database functionality:
+# - btr: B-tree operations (indexing)
+# - dict: Data dictionary management
+# - trx: Transaction management
+# - lock: Concurrency control
+# - Various other core subsystems
+#
+# The registration follows a consistent naming pattern for maintainability.
+#
 #           | Executable name       | module folder     |
 # ---------------------------------------------------------------------------------------------------------------------
 innodb_gtest( utest_ut                modules/ut        )
@@ -196,10 +289,28 @@ innodb_gtest( utest_rem               modules/rem       )
 innodb_gtest( utest_row               modules/row       )
 innodb_gtest( utest_sync              modules/sync      )
 
-# ---------------------------------------------------------------------------------------------------------------------
-# Test Executable Aggregation
-# ---------------------------------------------------------------------------------------------------------------------
-# Combine all unit test objects into a single executable for efficient testing
+# ====================================================================================================================
+# 4. Test Executable Aggregation
+# ====================================================================================================================
+#
+# WHY SINGLE EXECUTABLE:
+# ---------------------
+# Combining all unit tests into one executable provides several advantages:
+# - Faster CI/CD execution (single process launch vs. multiple)
+# - Comprehensive test reporting in one place
+# - Easier debugging of test interdependencies
+# - Reduced memory overhead from shared test infrastructure
+# - Consistent test execution environment
+#
+# WHY OBJECT LIBRARY AGGREGATION:
+# -----------------------------
+# Using $<TARGET_OBJECTS:...> generator expressions allows CMake to properly
+# handle the compilation and linking of all test objects. This approach:
+# - Enables efficient incremental builds
+# - Maintains proper dependency tracking
+# - Avoids duplicate compilation of common code
+# - Supports parallel compilation effectively
+#
 
 # Object Collection
 # ----------------
@@ -233,10 +344,39 @@ if(INNODB_ENABLE_GCOV)
     endif()
 endif()
 
+# Add sanitizer link options when enabled
+target_link_options(utest PRIVATE
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_ASAN}>>:-fsanitize=address>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_TSAN}>>:-fsanitize=thread>
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${INNODB_ENABLE_UBSAN}>>:-fsanitize=undefined>
+)
+
 set_target_properties(utest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/innodb/bin/utests/$<CONFIG>
     FOLDER ${INNODB_UNIT_TEST_TARGET_FOLDER}
 )
+
+# ====================================================================================================================
+# 5. Coverage and Reporting Configuration
+# ====================================================================================================================
+#
+# WHY GTEST DISCOVERY:
+# -------------------
+# Google Test's automatic test discovery eliminates the need to manually register
+# each test function. This approach:
+# - Reduces boilerplate code in test files
+# - Automatically picks up new tests without build system changes
+# - Provides consistent test execution across environments
+# - Enables better IDE integration and debugging
+#
+# WHY XML OUTPUT:
+# --------------
+# XML test results are crucial for CI/CD integration because they:
+# - Provide structured, machine-readable test results
+# - Enable trend analysis and historical comparisons
+# - Integrate with various CI tools (Jenkins, GitLab CI, etc.)
+# - Allow for automated quality gate enforcement
+#
 
 # GTest Integration
 # ----------------
@@ -251,6 +391,21 @@ gtest_discover_tests(utest
         TIMEOUT 120
     XML_OUTPUT_DIR ${CMAKE_BINARY_DIR}/innodb/bin/utests/$<CONFIG>/test-results
 )
+
+# WHY COVERAGE ANALYSIS:
+# ---------------------
+# Code coverage measurement is essential for quality assurance because it:
+# - Identifies untested code paths that may harbor bugs
+# - Ensures adequate test coverage for critical functionality
+# - Guides test development efforts to areas needing more testing
+# - Provides confidence in refactoring and code changes
+# - Meets industry standards for software quality metrics
+#
+# WHY OPTIONAL GCOVR:
+# ------------------
+# Making gcovr optional acknowledges that not all development environments
+# may have it installed, while still providing coverage capabilities where available.
+# This approach maximizes compatibility across different setups.
 
 # Coverage Reporting (Optional)
 # ----------------------------
