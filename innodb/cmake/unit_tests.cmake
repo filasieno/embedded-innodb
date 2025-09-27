@@ -134,6 +134,16 @@ endfunction()
 # allowing customization where needed.
 #
 
+# Configuration Variables
+# ----------------------
+set(INNODB_UNIT_TEST_TARGET_FOLDER     "Unit Tests")  # IDE folder organization
+set(INNODB_UNIT_TEST_ROOT_DIR          "${CMAKE_SOURCE_DIR}/innodb/unit-tests")
+set(INNODB_UNIT_TEST_SOURCE_DIR        "${INNODB_UNIT_TEST_ROOT_DIR}/src")
+set(INNODB_UNIT_TEST_COMMON_INCLUDES   "${CMAKE_SOURCE_DIR}/innodb/include"
+                                       "${CMAKE_SOURCE_DIR}/innodb/src/include"
+                                       "${INNODB_PRIVATE_GENERATED_INCLUDE_DIR}"
+                                       "${INNODB_UNIT_TEST_SOURCE_DIR}/common")
+
 # ---------------------------------------------------------------------------------------------------------------------
 # innodb_create_object_library
 # ---------------------------------------------------------------------------------------------------------------------
