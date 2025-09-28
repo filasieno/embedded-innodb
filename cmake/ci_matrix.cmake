@@ -42,12 +42,17 @@
 # ====================================================================================================================
 # Configure available build types and set Debug as default.
 # VALID_BUILD_TYPES: List of supported build configurations
+set(VALID_BUILD_TYPES Debug Release RelWithDebInfo MinSizeRel)
 if(NOT CMAKE_CONFIGURATION_TYPES)
-    set(VALID_BUILD_TYPES Debug Release)
+    # Single-config generator (Make, Ninja); note currenty we only support Ninja Multi-Config
+    # Keep this single-config behavior for consistency with the preset configurations
+    # In the future we might add single-config generator
     if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
         set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
     endif()
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${VALID_BUILD_TYPES})
+else()
+    set(CMAKE_CONFIGURATION_TYPES "${VALID_BUILD_TYPES}" CACHE STRING "Semicolon separated list of supported configuration types" FORCE)
 endif()
 
 # ====================================================================================================================
@@ -68,6 +73,7 @@ add_compile_definitions($<$<CONFIG:Debug>:UNIV_DEBUG>)
 # 4. Compiler-Specific Options
 # ====================================================================================================================
 # Suppress Clang-specific warnings for tautological comparisons in constexpr expressions
+# TEMPORARY: some code contains some tautological comparisons
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of-range-compare>)
 
 # ====================================================================================================================
@@ -79,7 +85,7 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-tautological-constant-out-of
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR INNODB_ENABLE_GCOV)
         set(INNODB_FORTIFY_OFF_FLAGS "-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0")
-        set(CMAKE_CXX_FLAGS   "${CMAKE_CXX_FLAGS} ${INNODB_FORTIFY_OFF_FLAGS}")
+        set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} ${INNODB_FORTIFY_OFF_FLAGS}")
     endif()
 endif()
 
@@ -155,16 +161,27 @@ message(STATUS "")
 message(STATUS "=== Embedded InnoDB Configuration Summary ===")
 message(STATUS "Version:                  ${INNODB_VERSION}")
 message(STATUS "API Version:              ${INNODB_API_VERSION_STRING}")
-message(STATUS "Build Type:               ${CMAKE_BUILD_TYPE}")
+
+# Handle build type display for different generator types
+if(CMAKE_CONFIGURATION_TYPES)
+    # Multi-config generator (Ninja Multi-Config, Visual Studio)
+    # Shows all available build configurations that can be selected at build time
+    message(STATUS "Build Generator:          ${CMAKE_GENERATOR} (Multi-Config)")
+    message(STATUS "Available Configs:        ${CMAKE_CONFIGURATION_TYPES}")
+else()
+    # Single-config generator (Make, Ninja)
+    # Shows the single build type set at configure time
+    message(STATUS "Build Type:               ${CMAKE_BUILD_TYPE}")
+endif()
+
 message(STATUS "C++ Compiler:             ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "Install Prefix:           ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "")
 message(STATUS "Features:")
-message(STATUS "  Unit Tests:                   ${INNODB_ENABLE_UNIT_TESTING}")
-message(STATUS "  Integration Tests:            ${INNODB_ENABLE_INTEGRATION_TESTING}")
-message(STATUS "  GCOV Coverage:                ${INNODB_ENABLE_GCOV}")
+message(STATUS "  Build Unit Tests:             ${INNODB_ENABLE_UNIT_TESTING}")
+message(STATUS "  Build Integration Tests:      ${INNODB_ENABLE_INTEGRATION_TESTING}")
+message(STATUS "  Enable GCOV Coverage:         ${INNODB_ENABLE_GCOV}")
 message(STATUS "  XA Support:                   ${INNODB_ENABLE_XA}")
-message(STATUS "  Lua Bindings:                 ${INNODB_ENABLE_LUA}")
 message(STATUS "  Address Sanitizer (ASAN):     ${INNODB_ENABLE_ASAN}")
 message(STATUS "  Thread Sanitizer (TSAN):      ${INNODB_ENABLE_TSAN}")
 message(STATUS "  UBSanitizer (UBSAN):          ${INNODB_ENABLE_UBSAN}")

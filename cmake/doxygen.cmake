@@ -95,8 +95,76 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_RECURSIVE          YES)  # Recursively parse all source files
     set(DOXYGEN_OUTPUT_DIRECTORY   "${CMAKE_BINARY_DIR}/docs")
 
-    # Note: Additional Doxygen variables can be set here as needed
-    # The doxygen_add_docs() command would be called in the main CMakeLists.txt if needed
+    # ====================================================================================================================
+    # 3. Doxygen Target Creation
+    # ====================================================================================================================
+    #
+    # WHY MULTIPLE TARGETS:
+    # -------------------
+    # We provide two documentation targets for different audiences:
+    # - public-doc: For library users (clean, focused API documentation)
+    # - internal-doc: For developers (comprehensive internal documentation)
+    # This allows users to get relevant documentation without internal complexity
+    #
+
+    # ====================================================================================================================
+    # 3.1 Public Documentation Target
+    # ====================================================================================================================
+    #
+    # TARGET: public-doc
+    # PURPOSE: Generate user-facing API documentation
+    # AUDIENCE: Library users and external developers
+    # CONTENT: Only public headers (innodb/include/innodb.h)
+    #
+    # WHY PUBLIC-ONLY:
+    # ---------------
+    # Public documentation should be:
+    # - Focused on the stable API that users depend on
+    # - Free of internal implementation details
+    # - Suitable for distribution and external reference
+    # - Smaller and faster to generate
+    #
+
+    doxygen_add_docs(public-doc
+        "${CMAKE_SOURCE_DIR}/innodb/include/innodb.h"
+        COMMENT "Generate public API documentation for library users"
+    )
+
+    # ====================================================================================================================
+    # 3.2 Internal Documentation Target
+    # ====================================================================================================================
+    #
+    # TARGET: internal-doc
+    # PURPOSE: Generate comprehensive internal documentation
+    # AUDIENCE: Project maintainers and contributors
+    # CONTENT: Both public and private headers
+    #
+    # WHY INTERNAL + PUBLIC:
+    # ---------------------
+    # Internal documentation includes:
+    # - Public API (for API consumers)
+    # - Private headers (for implementation understanding)
+    # - Internal data structures and functions
+    # - Development and maintenance information
+    #
+
+    doxygen_add_docs(internal-doc
+        "${CMAKE_SOURCE_DIR}/innodb/include"
+        "${CMAKE_SOURCE_DIR}/innodb/src/include"
+        COMMENT "Generate comprehensive internal documentation for developers"
+    )
+
+    # ====================================================================================================================
+    # 4. Target Organization
+    # ====================================================================================================================
+    #
+    # Organizing targets into folders improves IDE navigation by:
+    # - Grouping related targets together in the project explorer
+    # - Reducing visual clutter in the target list
+    # - Making it easier to find documentation-related targets
+    #
+    set_target_properties(public-doc internal-doc PROPERTIES FOLDER "Documentation")
+
 else()
     message(STATUS "Doxygen not found - documentation generation will be skipped")
 endif()

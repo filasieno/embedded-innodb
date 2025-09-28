@@ -114,6 +114,7 @@ endif()
 include(cmake/version.cmake)
 include(cmake/config.cmake)
 include(cmake/ci_matrix.cmake)
+include(cmake/doxygen.cmake)
 
 # ====================================================================================================================
 # 3. INNODB CORE LIBRARY BUILD
