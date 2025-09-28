@@ -104,7 +104,6 @@ option(INNODB_ENABLE_TSAN                "Enable Clang Thread Sanitizer (TSAN)" 
 option(INNODB_ENABLE_UBSAN               "Enable Clang Undefined Behavior Sanitizer (UBSAN)" OFF)
 option(INNODB_ENABLE_UNITY_BUILD         "Enable unity builds for faster compilation"        OFF)
 option(INNODB_ENABLE_IPO                 "Enable Interprocedural Optimization (LTO)"         OFF)
-option(INNODB_ENABLE_CCACHE              "Enable ccache for faster rebuilds"                 ON)
 option(INNODB_ENABLE_CLANG_TIDY          "Enable clang-tidy static analysis"                 OFF)
 
 # ====================================================================================================================
@@ -135,16 +134,16 @@ if(ENABLED_SANITIZERS)
     # Ensure only Clang compiler is used with sanitizers
     if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         message(FATAL_ERROR "Sanitizers are only supported with Clang compiler. "
-                           "Current compiler: ${CMAKE_CXX_COMPILER_ID}. "
-                           "Enabled sanitizers: ${ENABLED_SANITIZERS}")
+                            "Current compiler: ${CMAKE_CXX_COMPILER_ID}. "
+                            "Enabled sanitizers: ${ENABLED_SANITIZERS}")
     endif()
 
     # Sanitizers are typically incompatible with each other
     list(LENGTH ENABLED_SANITIZERS SANITIZER_COUNT)
     if(SANITIZER_COUNT GREATER 1)
         message(FATAL_ERROR "Multiple sanitizers enabled: ${ENABLED_SANITIZERS}. "
-                           "Sanitizers are incompatible with each other. "
-                           "Please enable only one sanitizer at a time.")
+                            "Sanitizers are incompatible with each other. "
+                            "Please enable only one sanitizer at a time.")
     endif()
 endif()
 
@@ -182,19 +181,21 @@ message(STATUS "  Build Unit Tests:             ${INNODB_ENABLE_UNIT_TESTING}")
 message(STATUS "  Build Integration Tests:      ${INNODB_ENABLE_INTEGRATION_TESTING}")
 message(STATUS "  Enable GCOV Coverage:         ${INNODB_ENABLE_GCOV}")
 message(STATUS "  XA Support:                   ${INNODB_ENABLE_XA}")
-message(STATUS "  Address Sanitizer (ASAN):     ${INNODB_ENABLE_ASAN}")
-message(STATUS "  Thread Sanitizer (TSAN):      ${INNODB_ENABLE_TSAN}")
-message(STATUS "  UBSanitizer (UBSAN):          ${INNODB_ENABLE_UBSAN}")
+message(STATUS "  Address Sanitizer (ASAN):     ${INNODB_ENABLE_ASAN} \t[ ~2x slowdown, ~3x memory usage   ]")
+message(STATUS "  Thread Sanitizer (TSAN):      ${INNODB_ENABLE_TSAN} \t[ ~5-15x slowdown (very expensive) ]")
+message(STATUS "  UBSanitizer (UBSAN):          ${INNODB_ENABLE_UBSAN}\t[ Minimal overhead (~10-20%)       ]")
 message(STATUS "  Unity Build:                  ${INNODB_ENABLE_UNITY_BUILD}")
 message(STATUS "  Interprocedural Optimization: ${INNODB_ENABLE_IPO}")
-message(STATUS "  ccache:                       ${INNODB_ENABLE_CCACHE}")
 message(STATUS "  clang-tidy:                   ${INNODB_ENABLE_CLANG_TIDY}")
 message(STATUS "")
 message(STATUS "Dependencies:")
-message(STATUS "  liburing:       ${LIBURING_VERSION}")
-message(STATUS "  BS Thread Pool: ${BS_THREAD_POOL_VERSION}")
-message(STATUS "  BISON:          ${BISON_VERSION}")
-message(STATUS "  FLEX:           ${FLEX_VERSION}")
-message(STATUS "  GTest:          ${GTest_VERSION}")
+message(STATUS "  liburing:         ${LIBURING_VERSION}")
+message(STATUS "  BS Thread Pool:   ${BS_THREAD_POOL_VERSION}")
+message(STATUS "  Bison:            ${BISON_VERSION}")
+message(STATUS "  Flex:             ${FLEX_VERSION}")
+message(STATUS "  LuaJIT:           ${LUAJIT_VERSION}")
+message(STATUS "  Google Test:      ${GTEST_VERSION}")
+message(STATUS "  Google Benchmark: ${GBENCHMARK_VERSION}")
+message(STATUS "  Google Mock:      ${GMOCK_VERSION}")
 message(STATUS "")
 

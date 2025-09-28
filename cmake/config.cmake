@@ -116,9 +116,14 @@ find_package(FLEX            REQUIRED)
 find_package(BISON           REQUIRED)
 find_package(Threads         REQUIRED)
 
+# =========================
 # Core Runtime Dependencies
-# ------------------------
+# =========================
+
+# -----------------------------------------------------------------------------------
 # liburing: Linux-native asynchronous I/O library (required for high-performance I/O)
+# -----------------------------------------------------------------------------------
+
 pkg_check_modules(LIBURING REQUIRED IMPORTED_TARGET liburing)
 
 if(NOT LIBURING_FOUND)
@@ -139,7 +144,10 @@ if(LIBURING_VERSION)
     endif()
 endif()
 
+# ----------------------------------------------------------------------------------------
 # BS Thread Pool: High-performance C++ thread pool library (required for async operations)
+# ----------------------------------------------------------------------------------------
+
 pkg_check_modules(BS_THREAD_POOL REQUIRED IMPORTED_TARGET libbsthreadpool)
 
 if(NOT BS_THREAD_POOL_FOUND)
@@ -159,8 +167,54 @@ if(BS_THREAD_POOL_VERSION)
     endif()
 endif()
 
+# -----------------------------------------------------------------------------------
+# luajit: Lua scripting language (required for stored procedures)
+# -----------------------------------------------------------------------------------   
+
+pkg_check_modules(LUAJIT REQUIRED IMPORTED_TARGET luajit)
+if(NOT LUAJIT_FOUND)
+    message(FATAL_ERROR "luajit is required but not found.")
+endif()
+
+# Validate luajit version
+if(LUAJIT_VERSION)
+    if(LUAJIT_VERSION VERSION_LESS "2.1")
+        message(FATAL_ERROR "luajit version ${LUAJIT_VERSION} detected. Version 2.1+ recommendeis required.")
+    endif()
+endif()
+
+
+# -----------------------------------------------------------------------------------
+# Google Test Framework: Unit testing framework (required for unit tests)
+# -----------------------------------------------------------------------------------   
+
+pkg_check_modules(GTEST REQUIRED IMPORTED_TARGET gtest)
+if(NOT GTEST_FOUND)
+    message(FATAL_ERROR "gtest is required but not found.")
+endif()
+
+# -----------------------------------------------------------------------------------
+# Google Benchmark Framework: Benchmarking framework (required for benchmarking)
+# -----------------------------------------------------------------------------------   
+
+pkg_check_modules(GBENCHMARK REQUIRED IMPORTED_TARGET benchmark)
+if(NOT GBENCHMARK_FOUND)
+    message(FATAL_ERROR "gbenchmark is required but not found.")
+endif()
+
+
+# -----------------------------------------------------------------------------------
+# Google Mock Framework: Mocking framework (required for mocking)
+# -----------------------------------------------------------------------------------   
+
+pkg_check_modules(GMOCK REQUIRED IMPORTED_TARGET gmock)
+if(NOT GMOCK_FOUND)
+    message(FATAL_ERROR "gmock is required but not found.")
+endif()
+
+# ====================================================================================================================
 # Optional Build Acceleration
-# --------------------------
+# ====================================================================================================================
 # ccache: Compiler cache for faster rebuilds (optional but recommended)
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
