@@ -89,11 +89,10 @@ if(DOXYGEN_FOUND)
     # Project Information
     set(DOXYGEN_PROJECT_NAME       "Embedded InnoDB")
 
-    # Output Configuration
+    # Output Configuration (common settings)
     set(DOXYGEN_GENERATE_HTML      YES)  # Generate HTML documentation
     set(DOXYGEN_GENERATE_LATEX     NO)   # Skip LaTeX/PDF generation for faster builds
     set(DOXYGEN_RECURSIVE          YES)  # Recursively parse all source files
-    set(DOXYGEN_OUTPUT_DIRECTORY   "${CMAKE_BINARY_DIR}/docs")
 
     # ====================================================================================================================
     # 3. Doxygen Target Creation
@@ -115,6 +114,7 @@ if(DOXYGEN_FOUND)
     # PURPOSE: Generate user-facing API documentation
     # AUDIENCE: Library users and external developers
     # CONTENT: Only public headers (innodb/include/innodb.h)
+    # OUTPUT: ${CMAKE_BINARY_DIR}/doc
     #
     # WHY PUBLIC-ONLY:
     # ---------------
@@ -125,6 +125,7 @@ if(DOXYGEN_FOUND)
     # - Smaller and faster to generate
     #
 
+    set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/doc")
     doxygen_add_docs(public-doc
         "${CMAKE_SOURCE_DIR}/innodb/include/innodb.h"
         COMMENT "Generate public API documentation for library users"
@@ -138,6 +139,7 @@ if(DOXYGEN_FOUND)
     # PURPOSE: Generate comprehensive internal documentation
     # AUDIENCE: Project maintainers and contributors
     # CONTENT: Both public and private headers
+    # OUTPUT: ${CMAKE_BINARY_DIR}/internal-doc
     #
     # WHY INTERNAL + PUBLIC:
     # ---------------------
@@ -148,6 +150,7 @@ if(DOXYGEN_FOUND)
     # - Development and maintenance information
     #
 
+    set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/internal-doc")
     doxygen_add_docs(internal-doc
         "${CMAKE_SOURCE_DIR}/innodb/include"
         "${CMAKE_SOURCE_DIR}/innodb/src/include"
